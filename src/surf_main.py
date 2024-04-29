@@ -31,7 +31,7 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QMainWindow,
     QMenu, QMenuBar, QPushButton, QSizePolicy,
     QStatusBar, QTabWidget, QTextEdit, QVBoxLayout,
-    QWidget, QFileDialog, QSplitter)
+    QWidget, QFileDialog, QSplitter, QPlainTextEdit)
 
 class LineNumberArea(QWidget):
     def __init__(self, editor):
@@ -44,7 +44,7 @@ class LineNumberArea(QWidget):
     def paintEvent(self, event):
         self.codeEditor.lineNumberAreaPaintEvent(event)
 
-class CodeEditor(QTextEdit):
+class CodeEditor(QPlainTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.lineNumberArea = LineNumberArea(self)
@@ -63,7 +63,6 @@ class CodeEditor(QTextEdit):
 
     def updateLineNumberAreaWidth(self, _=0):
         self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
-        self.updateLineNumberArea()  # Ensure the line number area is updated
 
     def updateLineNumberArea(self, _=0):
         self.lineNumberArea.update()
@@ -76,28 +75,41 @@ class CodeEditor(QTextEdit):
     def lineNumberAreaPaintEvent(self, event):
         painter = QPainter(self.lineNumberArea)
         painter.fillRect(event.rect(), QColor(Qt.white))
-    
-        # Start drawing from the first visible block
+
         block = self.firstVisibleBlock()
         blockNumber = block.blockNumber()
         top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
         bottom = top + self.blockBoundingRect(block).height()
-    
+
         # Adjust the starting block number to account for any initial blocks that are not visible
         blockNumber += 1
-    
+
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(blockNumber)
                 painter.setPen(Qt.black)
                 painter.drawText(0, top, self.lineNumberArea.width(), self.fontMetrics().height(),
                                  Qt.AlignRight, number)
-    
+
             block = block.next()
             top = bottom
             bottom = top + self.blockBoundingRect(block).height()
             blockNumber += 1
 
+    def highlightCurrentLine(self):
+        extraSelections = []
+
+        if not self.isReadOnly():
+            selection = QTextEdit.ExtraSelection()
+
+            lineColor = QColor(Qt.yellow).lighter(160)
+            selection.format.setBackground(lineColor)
+            selection.format.setProperty(QTextFormat.FullWidthSelection, True)
+            selection.cursor = self.textCursor()
+            selection.cursor.clearSelection()
+            extraSelections.append(selection)
+
+        self.setExtraSelections(extraSelections)
     def highlightCurrentLine(self):
         extraSelections = []
 
@@ -190,10 +202,7 @@ class Ui_MainWindow(object):
         self.textEdit_2.setSizePolicy(self.sizePolicy)
 
         self.verticalLayout_8.addWidget(self.textEdit_2)
-
         self.splitWidget.addTab(self.splitTab1, "")
-
-        self.gridLayout.addWidget(self.splitWidget)
 
         self.editorWidget = QTabWidget(self.centralwidget)        
         self.editorWidget.setObjectName(u"editorWidget")
@@ -219,6 +228,7 @@ class Ui_MainWindow(object):
         self.editorWidget.addTab(self.fileTab1, "")
 
         self.gridLayout.addWidget(self.editorWidget)
+        self.gridLayout.addWidget(self.splitWidget)
 
     def setup_browser(self, MainWindow):
         self.tabWidget = QTabWidget(self.centralwidget)
@@ -461,8 +471,6 @@ class Ui_MainWindow(object):
         self.horizSplit.addWidget(self.gridLayout)
         self.horizSplit.addWidget(self.tabWidget)
         self.mainGrid.addWidget(self.horizSplit, 0, 2)
-        #self.mainGrid.addWidget(self.gridLayout, 0, 2)
-        #self.mainGrid.addWidget(self.tabWidget, 0, 3, 1, 1)
         self.mainGrid.addWidget(self.surfMenu, 0, 1, 1, 1)
         self.verticalLayout_2.addLayout(self.mainGrid)
 
@@ -555,8 +563,11 @@ class Ui_MainWindow(object):
             html = self.editor_tabs[idx].toPlainText()
             with open(filename, 'w', encoding='utf-8') as fn:
                 fn.writelines(html)
-        self.update_browsers(filename)
-    
+            self.update_browsers(filename)
+            # Update the tab name with the filename extracted from the path
+            new_tab_name = filename.split('/')[-1]
+            self.editorWidget.setTabText(idx, new_tab_name)        
+        
     def save_all(self):
         for i in range(len(self.editor_tabs)):
             self.save_tab(i)
@@ -594,23 +605,7 @@ class Ui_MainWindow(object):
         self.actionHide_Preview.setText(QCoreApplication.translate("MainWindow", u"Hide Preview", None))
         self.actionNew_Preview_Window.setText(QCoreApplication.translate("MainWindow", u"New Preview Window", None))
         self.actionSave_all.setText(QCoreApplication.translate("MainWindow", u"Save all", None))
-        self.textEdit_2.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"hr { height: 1px; border-width: 0; }\n"
-"li.unchecked::marker { content: \"\\2610\"; }\n"
-"li.checked::marker { content: \"\\2612\"; }\n"
-"</style></head><body style=\" font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">sf</p></body></html>", None))
         self.splitWidget.setTabText(self.splitWidget.indexOf(self.splitTab1), QCoreApplication.translate("MainWindow", u"untitled", None))
-        self.textEdit.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"hr { height: 1px; border-width: 0; }\n"
-"li.unchecked::marker { content: \"\\2610\"; }\n"
-"li.checked::marker { content: \"\\2612\"; }\n"
-"</style></head><body style=\" font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">sdfa</p></body></html>", None))
         self.editorWidget.setTabText(self.editorWidget.indexOf(self.fileTab1), QCoreApplication.translate("MainWindow", u"untitled", None))
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.previewMobile), QCoreApplication.translate("MainWindow", u"Mobile", None))
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.preview720p), QCoreApplication.translate("MainWindow", u"720p", None))
