@@ -23,7 +23,7 @@ from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect,
     QSize, QTime, QUrl, Qt)
 from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
-    QCursor, QFont, QFontDatabase, QGradient,
+    QCursor, QFont, QFontDatabase, QGradient, QTextFormat, 
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
@@ -31,8 +31,89 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QMainWindow,
     QMenu, QMenuBar, QPushButton, QSizePolicy,
     QStatusBar, QTabWidget, QTextEdit, QVBoxLayout,
-    QWidget, QFileDialog)
+    QWidget, QFileDialog, QSplitter)
 
+class LineNumberArea(QWidget):
+    def __init__(self, editor):
+        super().__init__(editor)
+        self.codeEditor = editor
+
+    def sizeHint(self):
+        return QSize(self.codeEditor.lineNumberAreaWidth(), 0)
+
+    def paintEvent(self, event):
+        self.codeEditor.lineNumberAreaPaintEvent(event)
+
+class CodeEditor(QTextEdit):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.lineNumberArea = LineNumberArea(self)
+
+        self.textChanged.connect(self.updateLineNumberAreaWidth)
+        self.verticalScrollBar().valueChanged.connect(self.updateLineNumberArea)
+        self.cursorPositionChanged.connect(self.highlightCurrentLine)
+
+        self.updateLineNumberAreaWidth(0)  # Initial update with default value
+
+    def lineNumberAreaWidth(self):
+        lines = self.document().blockCount()
+        digits = len(str(lines))
+        space = 3 + self.fontMetrics().horizontalAdvance('9') * digits
+        return space
+
+    def updateLineNumberAreaWidth(self, _=0):
+        self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
+        self.updateLineNumberArea()  # Ensure the line number area is updated
+
+    def updateLineNumberArea(self, _=0):
+        self.lineNumberArea.update()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        cr = self.contentsRect()
+        self.lineNumberArea.setGeometry(cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height())
+
+    def lineNumberAreaPaintEvent(self, event):
+        painter = QPainter(self.lineNumberArea)
+        painter.fillRect(event.rect(), QColor(Qt.white))
+    
+        # Start drawing from the first visible block
+        block = self.firstVisibleBlock()
+        blockNumber = block.blockNumber()
+        top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
+        bottom = top + self.blockBoundingRect(block).height()
+    
+        # Adjust the starting block number to account for any initial blocks that are not visible
+        blockNumber += 1
+    
+        while block.isValid() and top <= event.rect().bottom():
+            if block.isVisible() and bottom >= event.rect().top():
+                number = str(blockNumber)
+                painter.setPen(Qt.black)
+                painter.drawText(0, top, self.lineNumberArea.width(), self.fontMetrics().height(),
+                                 Qt.AlignRight, number)
+    
+            block = block.next()
+            top = bottom
+            bottom = top + self.blockBoundingRect(block).height()
+            blockNumber += 1
+
+    def highlightCurrentLine(self):
+        extraSelections = []
+
+        if not self.isReadOnly():
+            selection = QTextEdit.ExtraSelection()
+
+            lineColor = QColor(Qt.black).lighter(160)
+
+            selection.format.setBackground(lineColor)
+            selection.format.setProperty(QTextFormat.FullWidthSelection, True)
+            selection.cursor = self.textCursor()
+            selection.cursor.clearSelection()
+            extraSelections.append(selection)
+
+        self.setExtraSelections(extraSelections)
+        
 class Ui_MainWindow(object):
     def setup_menu(self, MainWindow):
         self.actionNew = QAction(MainWindow)
@@ -90,7 +171,7 @@ class Ui_MainWindow(object):
         
         
     def setup_editor(self, MainWindow):
-        self.gridLayout = QGridLayout()
+        self.gridLayout = QSplitter(Qt.Vertical)
         self.gridLayout.setObjectName(u"gridLayout")
         self.splitWidget = QTabWidget(self.centralwidget)
         self.splitWidget.setObjectName(u"splitWidget")
@@ -103,7 +184,7 @@ class Ui_MainWindow(object):
         self.splitTab1.setSizePolicy(self.sizePolicy)
         self.verticalLayout_8 = QVBoxLayout(self.splitTab1)
         self.verticalLayout_8.setObjectName(u"verticalLayout_8")
-        self.textEdit_2 = QTextEdit(self.splitTab1)
+        self.textEdit_2 = CodeEditor(self.splitTab1)
         self.textEdit_2.setObjectName(u"textEdit_2")
         self.sizePolicy.setHeightForWidth(self.textEdit_2.sizePolicy().hasHeightForWidth())
         self.textEdit_2.setSizePolicy(self.sizePolicy)
@@ -112,7 +193,7 @@ class Ui_MainWindow(object):
 
         self.splitWidget.addTab(self.splitTab1, "")
 
-        self.gridLayout.addWidget(self.splitWidget, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.splitWidget)
 
         self.editorWidget = QTabWidget(self.centralwidget)        
         self.editorWidget.setObjectName(u"editorWidget")
@@ -127,7 +208,7 @@ class Ui_MainWindow(object):
         self.fileTab1.setSizePolicy(self.sizePolicy1)
         self.verticalLayout_9 = QVBoxLayout(self.fileTab1)
         self.verticalLayout_9.setObjectName(u"verticalLayout_9")
-        self.textEdit = QTextEdit(self.fileTab1)
+        self.textEdit = CodeEditor(self.fileTab1)
         self.textEdit.setObjectName(u"textEdit")
         self.sizePolicy1.setHeightForWidth(self.textEdit.sizePolicy().hasHeightForWidth())
         self.textEdit.setSizePolicy(self.sizePolicy1)
@@ -137,7 +218,7 @@ class Ui_MainWindow(object):
 
         self.editorWidget.addTab(self.fileTab1, "")
 
-        self.gridLayout.addWidget(self.editorWidget, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.editorWidget)
 
     def setup_browser(self, MainWindow):
         self.tabWidget = QTabWidget(self.centralwidget)
@@ -376,8 +457,12 @@ class Ui_MainWindow(object):
         self.setup_browser(MainWindow)
         self.setup_surf_menu(MainWindow)
 
-        self.mainGrid.addLayout(self.gridLayout, 0, 2, 1, 1)
-        self.mainGrid.addWidget(self.tabWidget, 0, 3, 1, 1)
+        self.horizSplit = QSplitter(Qt.Horizontal)
+        self.horizSplit.addWidget(self.gridLayout)
+        self.horizSplit.addWidget(self.tabWidget)
+        self.mainGrid.addWidget(self.horizSplit, 0, 2)
+        #self.mainGrid.addWidget(self.gridLayout, 0, 2)
+        #self.mainGrid.addWidget(self.tabWidget, 0, 3, 1, 1)
         self.mainGrid.addWidget(self.surfMenu, 0, 1, 1, 1)
         self.verticalLayout_2.addLayout(self.mainGrid)
 
@@ -396,7 +481,7 @@ class Ui_MainWindow(object):
         self.actionOpen.triggered.connect(self.open_file)
         self.actionSave.triggered.connect(lambda: self.save_tab(self.editorWidget.currentIndex()))
         self.actionSave_as.triggered.connect(lambda: self.save_tab(dialog=True))
-        #self.actionQuit.triggered.connect()
+        self.actionQuit.triggered.connect(sys.exit)
         #self.actionPreferences.triggered.connect()
         #self.actionAbout_Surf.triggered.connect()
         #self.actionJoin.triggered.connect()
