@@ -3,6 +3,7 @@
 #Sun Apr 28 06:40:48 PM +07 2024
 #surf_main.py
 
+import PySide6
 from qt_material import apply_stylesheet
 import sys
 from surf_logging import set_logging
@@ -33,13 +34,7 @@ from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QMainWindow,
     QWidget)
 
 class Ui_MainWindow(object):
-    def setupUi(self, MainWindow):
-        if not MainWindow.objectName():
-            MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1800, 1000)
-        palette = QPalette()
-        MainWindow.setPalette(palette)
-        MainWindow.setAutoFillBackground(True)
+    def setup_menu(self, MainWindow):
         self.actionNew = QAction(MainWindow)
         self.actionNew.setObjectName(u"actionNew")
         self.actionOpen = QAction(MainWindow)
@@ -62,32 +57,56 @@ class Ui_MainWindow(object):
         self.actionNew_Preview_Window.setObjectName(u"actionNew_Preview_Window")
         self.actionSave_all = QAction(MainWindow)
         self.actionSave_all.setObjectName(u"actionSave_all")
-        self.centralwidget = QWidget(MainWindow)
-        self.centralwidget.setObjectName(u"centralwidget")
-        self.verticalLayout_2 = QVBoxLayout(self.centralwidget)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.mainGrid = QGridLayout()
-        self.mainGrid.setObjectName(u"mainGrid")
+        
+        self.menubar = QMenuBar(MainWindow)
+        self.menubar.setObjectName(u"menubar")
+        self.menubar.setGeometry(QRect(0, 0, 927, 20))
+        self.menuFile = QMenu(self.menubar)
+        self.menuFile.setObjectName(u"menuFile")
+        self.menuSettings = QMenu(self.menubar)
+        self.menuSettings.setObjectName(u"menuSettings")
+        self.menuHelp = QMenu(self.menubar)
+        self.menuHelp.setObjectName(u"menuHelp")
+        self.menuWindow = QMenu(self.menubar)
+        self.menuWindow.setObjectName(u"menuWindow")
+        
+        self.menubar.addAction(self.menuFile.menuAction())
+        self.menubar.addAction(self.menuSettings.menuAction())
+        self.menubar.addAction(self.menuWindow.menuAction())
+        self.menubar.addAction(self.menuHelp.menuAction())
+        self.menuFile.addAction(self.actionNew)
+        self.menuFile.addAction(self.actionOpen)
+        self.menuFile.addAction(self.actionSave)
+        self.menuFile.addAction(self.actionSave_as)
+        self.menuFile.addSeparator()
+        self.menuFile.addSeparator()
+        self.menuFile.addAction(self.actionSave_all)
+        self.menuFile.addAction(self.actionQuit)
+        self.menuSettings.addAction(self.actionPreferences)
+        self.menuHelp.addAction(self.actionAbout_Surf)
+        self.menuWindow.addAction(self.actionJoin)
+        self.menuWindow.addAction(self.actionHide_Preview)
+        self.menuWindow.addAction(self.actionNew_Preview_Window)
+        
+        
+    def setup_editor(self, MainWindow):
         self.gridLayout = QGridLayout()
         self.gridLayout.setObjectName(u"gridLayout")
         self.splitWidget = QTabWidget(self.centralwidget)
         self.splitWidget.setObjectName(u"splitWidget")
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.splitWidget.sizePolicy().hasHeightForWidth())
-        self.splitWidget.setSizePolicy(sizePolicy)
+        self.splitWidget.setSizePolicy(self.sizePolicy)
+        self.sizePolicy.setHeightForWidth(self.splitWidget.sizePolicy().hasHeightForWidth())
         self.splitWidget.setDocumentMode(True)
         self.splitTab1 = QWidget()
         self.splitTab1.setObjectName(u"splitTab1")
-        sizePolicy.setHeightForWidth(self.splitTab1.sizePolicy().hasHeightForWidth())
-        self.splitTab1.setSizePolicy(sizePolicy)
+        self.sizePolicy.setHeightForWidth(self.splitTab1.sizePolicy().hasHeightForWidth())
+        self.splitTab1.setSizePolicy(self.sizePolicy)
         self.verticalLayout_8 = QVBoxLayout(self.splitTab1)
         self.verticalLayout_8.setObjectName(u"verticalLayout_8")
         self.textEdit_2 = QTextEdit(self.splitTab1)
         self.textEdit_2.setObjectName(u"textEdit_2")
-        sizePolicy.setHeightForWidth(self.textEdit_2.sizePolicy().hasHeightForWidth())
-        self.textEdit_2.setSizePolicy(sizePolicy)
+        self.sizePolicy.setHeightForWidth(self.textEdit_2.sizePolicy().hasHeightForWidth())
+        self.textEdit_2.setSizePolicy(self.sizePolicy)
 
         self.verticalLayout_8.addWidget(self.textEdit_2)
 
@@ -97,39 +116,21 @@ class Ui_MainWindow(object):
 
         self.editorWidget = QTabWidget(self.centralwidget)
         self.editorWidget.setObjectName(u"editorWidget")
-        sizePolicy.setHeightForWidth(self.editorWidget.sizePolicy().hasHeightForWidth())
-        self.editorWidget.setSizePolicy(sizePolicy)
-        self.editorWidget.setStyleSheet(
-            u'''QMenuBar::item:pressed{
-              spacing:2px;
-              padding:3px 4px;
-              background: #ffa458;
-            color:#000000;
-            }
-            QMenuBar::item:selected{
-              background-color:#ffa458;
-            color:#000000;
-            }
-            QMenu::item:selected{
-            background-color:#ffa458;
-            color:#000000;
-            }''')
+        self.sizePolicy.setHeightForWidth(self.editorWidget.sizePolicy().hasHeightForWidth())
+        self.editorWidget.setSizePolicy(self.sizePolicy)
         self.editorWidget.setElideMode(Qt.ElideLeft)
         self.editorWidget.setDocumentMode(True)
         self.editorWidget.setTabBarAutoHide(False)
         self.fileTab1 = QWidget()
         self.fileTab1.setObjectName(u"fileTab1")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.fileTab1.sizePolicy().hasHeightForWidth())
-        self.fileTab1.setSizePolicy(sizePolicy1)
+        self.sizePolicy1.setHeightForWidth(self.fileTab1.sizePolicy().hasHeightForWidth())
+        self.fileTab1.setSizePolicy(self.sizePolicy1)
         self.verticalLayout_9 = QVBoxLayout(self.fileTab1)
         self.verticalLayout_9.setObjectName(u"verticalLayout_9")
         self.textEdit = QTextEdit(self.fileTab1)
         self.textEdit.setObjectName(u"textEdit")
-        sizePolicy1.setHeightForWidth(self.textEdit.sizePolicy().hasHeightForWidth())
-        self.textEdit.setSizePolicy(sizePolicy1)
+        self.sizePolicy1.setHeightForWidth(self.textEdit.sizePolicy().hasHeightForWidth())
+        self.textEdit.setSizePolicy(self.sizePolicy1)
         self.textEdit.setStyleSheet(u"")
 
         self.verticalLayout_9.addWidget(self.textEdit)
@@ -138,13 +139,11 @@ class Ui_MainWindow(object):
 
         self.gridLayout.addWidget(self.editorWidget, 0, 0, 1, 1)
 
-
-        self.mainGrid.addLayout(self.gridLayout, 0, 2, 1, 1)
-
+    def setup_browser(self, MainWindow):
         self.tabWidget = QTabWidget(self.centralwidget)
         self.tabWidget.setObjectName(u"tabWidget")
-        sizePolicy.setHeightForWidth(self.tabWidget.sizePolicy().hasHeightForWidth())
-        self.tabWidget.setSizePolicy(sizePolicy)
+        self.sizePolicy.setHeightForWidth(self.tabWidget.sizePolicy().hasHeightForWidth())
+        self.tabWidget.setSizePolicy(self.sizePolicy)
         self.tabWidget.setSizeIncrement(QSize(0, 0))
         self.tabWidget.setTabPosition(QTabWidget.North)
         self.tabWidget.setTabShape(QTabWidget.Rounded)
@@ -170,15 +169,11 @@ class Ui_MainWindow(object):
         self.mobileLayout.setObjectName(u"mobileLayout")
         self.browserMobile = QWebEngineView(self.previewMobile)
         self.browserMobile.setObjectName(u"browserMobile")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.browserMobile.sizePolicy().hasHeightForWidth())
-        self.browserMobile.setSizePolicy(sizePolicy2)
+        self.sizePolicy2.setHeightForWidth(self.browserMobile.sizePolicy().hasHeightForWidth())
+        self.browserMobile.setSizePolicy(self.sizePolicy2)
         self.browserMobile.setUrl(QUrl(u"about:blank"))
 
         self.mobileLayout.addWidget(self.browserMobile)
-
 
         self.verticalLayout_4.addLayout(self.mobileLayout)
 
@@ -196,7 +191,6 @@ class Ui_MainWindow(object):
 
         self.browserLayout720.addWidget(self.browser720)
 
-
         self.verticalLayout_5.addLayout(self.browserLayout720)
 
         self.tabWidget_2.addTab(self.preview720p, "")
@@ -213,7 +207,6 @@ class Ui_MainWindow(object):
         self.browser1080.setUrl(QUrl(u"about:blank"))
 
         self.browserLayout1080.addWidget(self.browser1080)
-
 
         self.verticalLayout_3.addLayout(self.browserLayout1080)
 
@@ -246,15 +239,13 @@ class Ui_MainWindow(object):
 
         self.tabWidget.addTab(self.networkTab, "")
 
-        self.mainGrid.addWidget(self.tabWidget, 0, 3, 1, 1)
 
+    def setup_surf_menu(self, MainWindow):
         self.surfBtn = QPushButton(self.centralwidget)
         self.surfBtn.setObjectName(u"surfBtn")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Expanding)
-        sizePolicy3.setHorizontalStretch(0)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.surfBtn.sizePolicy().hasHeightForWidth())
-        self.surfBtn.setSizePolicy(sizePolicy3)
+
+        self.sizePolicy3.setHeightForWidth(self.surfBtn.sizePolicy().hasHeightForWidth())
+        self.surfBtn.setSizePolicy(self.sizePolicy3)
         self.surfBtn.setMaximumSize(QSize(15, 16777215))
         self.surfBtn.setBaseSize(QSize(200, 20))
         self.surfBtn.setCursor(QCursor(Qt.PointingHandCursor))
@@ -265,11 +256,9 @@ class Ui_MainWindow(object):
 
         self.surfMenu = QFrame(self.centralwidget)
         self.surfMenu.setObjectName(u"surfMenu")
-        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
-        sizePolicy4.setHorizontalStretch(0)
-        sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.surfMenu.sizePolicy().hasHeightForWidth())
-        self.surfMenu.setSizePolicy(sizePolicy4)
+
+        self.sizePolicy4.setHeightForWidth(self.surfMenu.sizePolicy().hasHeightForWidth())
+        self.surfMenu.setSizePolicy(self.sizePolicy4)
         self.surfMenu.setMinimumSize(QSize(110, 0))
         self.surfMenu.setMaximumSize(QSize(180, 16777215))
         self.surfMenu.setAutoFillBackground(True)
@@ -332,50 +321,97 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_10.addWidget(self.gitBtn)
 
+    def setupUi(self, MainWindow):
+        if not MainWindow.objectName():
+            MainWindow.setObjectName(u"MainWindow")
+        MainWindow.resize(1800, 1000)
+        MainWindow.setStyleSheet(
+            u'''QMenuBar::item:pressed{
+              spacing:2px;
+              padding:3px 4px;
+              background: #ffa458;
+            color:#000000;
+            }
+            QMenuBar::item:selected{
+              background-color:#ffa458;
+            color:#000000;
+            }
+            QMenu::item:selected{
+            background-color:#ffa458;
+            color:#000000;
+            }''')        
+        
+        palette = QPalette()
+        MainWindow.setPalette(palette)
+        MainWindow.setAutoFillBackground(True)
 
+        self.sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        self.sizePolicy.setHorizontalStretch(0)
+        self.sizePolicy.setVerticalStretch(0)
+        self.sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.sizePolicy1.setHorizontalStretch(0)
+        self.sizePolicy1.setVerticalStretch(0)                
+        self.sizePolicy2 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
+        self.sizePolicy2.setHorizontalStretch(0)
+        self.sizePolicy2.setVerticalStretch(0)
+        self.sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Expanding)
+        self.sizePolicy3.setHorizontalStretch(0)
+        self.sizePolicy3.setVerticalStretch(0)        
+        self.sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        self.sizePolicy4.setHorizontalStretch(0)
+        self.sizePolicy4.setVerticalStretch(0)
+        
+        self.centralwidget = QWidget(MainWindow)
+        self.centralwidget.setObjectName(u"centralwidget")
+        self.verticalLayout_2 = QVBoxLayout(self.centralwidget)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.mainGrid = QGridLayout()
+        self.mainGrid.setObjectName(u"mainGrid")
+
+        self.setup_menu(MainWindow)
+        self.setup_editor(MainWindow)
+        self.setup_browser(MainWindow)
+        self.setup_surf_menu(MainWindow)
+
+        self.mainGrid.addLayout(self.gridLayout, 0, 2, 1, 1)
+        self.mainGrid.addWidget(self.tabWidget, 0, 3, 1, 1)
         self.mainGrid.addWidget(self.surfMenu, 0, 1, 1, 1)
-
-
         self.verticalLayout_2.addLayout(self.mainGrid)
 
         MainWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QMenuBar(MainWindow)
-        self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 927, 20))
-        self.menuFile = QMenu(self.menubar)
-        self.menuFile.setObjectName(u"menuFile")
-        self.menuSettings = QMenu(self.menubar)
-        self.menuSettings.setObjectName(u"menuSettings")
-        self.menuHelp = QMenu(self.menubar)
-        self.menuHelp.setObjectName(u"menuHelp")
-        self.menuWindow = QMenu(self.menubar)
-        self.menuWindow.setObjectName(u"menuWindow")
         MainWindow.setMenuBar(self.menubar)
+        
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
-        self.menubar.addAction(self.menuFile.menuAction())
-        self.menubar.addAction(self.menuSettings.menuAction())
-        self.menubar.addAction(self.menuWindow.menuAction())
-        self.menubar.addAction(self.menuHelp.menuAction())
-        self.menuFile.addAction(self.actionNew)
-        self.menuFile.addAction(self.actionOpen)
-        self.menuFile.addAction(self.actionSave)
-        self.menuFile.addAction(self.actionSave_as)
-        self.menuFile.addSeparator()
-        self.menuFile.addSeparator()
-        self.menuFile.addAction(self.actionSave_all)
-        self.menuFile.addAction(self.actionQuit)
-        self.menuSettings.addAction(self.actionPreferences)
-        self.menuHelp.addAction(self.actionAbout_Surf)
-        self.menuWindow.addAction(self.actionJoin)
-        self.menuWindow.addAction(self.actionHide_Preview)
-        self.menuWindow.addAction(self.actionNew_Preview_Window)
+        self.surfMenu.hide()
 
         self.retranslateUi(MainWindow)
-        self.surfBtn.clicked.connect(self.surfMenu.show)
-
+        self.surfBtn.clicked.connect(self.toggle_surf)
+        self.actionNew.triggered.connect(self.add_tab)
+        self.actionOpen.triggered.connect(self.open_file)
+        self.actionSave.triggered.connect(self.save_tab)
+        self.actionSave_as.triggered.connect(lambda: self.save_tab(dialog=True))
+        #self.actionQuit.triggered.connect()
+        #self.actionPreferences.triggered.connect()
+        #self.actionAbout_Surf.triggered.connect()
+        #self.actionJoin.triggered.connect()
+        #self.actionHide_Preview.triggered.connect()
+        #self.actionNew_Preview_Window.triggered.connect()
+        self.actionSave_all.triggered.connect(self.save_all)
+        #self.aiRefactorBtn.clicked.connect()
+        #self.aiBugFixBtn.clicked.connect()
+        #self.aiMetaDataBtn.clicked.connect()
+        #self.aiTemplateBtn.clicked.connect()
+        #self.skeletonBtn.clicked.connect()
+        #self.cssEditorBtn.clicked.connect()
+        #self.findReplaceBtn.clicked.connect()
+        #self.externalDepsBtn.clicked.connect()
+        #self.jsSandboxBtn.clicked.connect()
+        #self.indentationBtn.clicked.connect()
+        #self.gitBtn.clicked.connect()
+                       
         self.splitWidget.setCurrentIndex(0)
         self.editorWidget.setCurrentIndex(0)
         self.tabWidget.setCurrentIndex(0)
@@ -385,6 +421,30 @@ class Ui_MainWindow(object):
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
+
+    def add_tab(self):
+        pass
+
+    def new_tab(self):
+        pass
+    
+    def remove_tab(self):
+        pass
+    
+    def save_tab(self):
+        pass
+    
+    def save_all(self):
+        pass
+    
+    def open_file(self):
+        pass
+    
+    def toggle_surf(self):
+        if self.surfMenu.isHidden():
+            self.surfMenu.show()
+        else:
+            self.surfMenu.hide()
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
