@@ -31,7 +31,7 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QMainWindow,
     QMenu, QMenuBar, QPushButton, QSizePolicy,
     QStatusBar, QTabWidget, QTextEdit, QVBoxLayout,
-    QWidget)
+    QWidget, QFileDialog)
 
 class Ui_MainWindow(object):
     def setup_menu(self, MainWindow):
@@ -114,7 +114,7 @@ class Ui_MainWindow(object):
 
         self.gridLayout.addWidget(self.splitWidget, 1, 0, 1, 1)
 
-        self.editorWidget = QTabWidget(self.centralwidget)
+        self.editorWidget = QTabWidget(self.centralwidget)        
         self.editorWidget.setObjectName(u"editorWidget")
         self.sizePolicy.setHeightForWidth(self.editorWidget.sizePolicy().hasHeightForWidth())
         self.editorWidget.setSizePolicy(self.sizePolicy)
@@ -131,7 +131,7 @@ class Ui_MainWindow(object):
         self.textEdit.setObjectName(u"textEdit")
         self.sizePolicy1.setHeightForWidth(self.textEdit.sizePolicy().hasHeightForWidth())
         self.textEdit.setSizePolicy(self.sizePolicy1)
-        self.textEdit.setStyleSheet(u"")
+        self.editor_tabs.append(self.textEdit)
 
         self.verticalLayout_9.addWidget(self.textEdit)
 
@@ -341,6 +341,9 @@ class Ui_MainWindow(object):
             color:#000000;
             }''')        
         
+        self.editor_tabs = list()
+        self.open_files = dict()
+        
         palette = QPalette()
         MainWindow.setPalette(palette)
         MainWindow.setAutoFillBackground(True)
@@ -391,7 +394,7 @@ class Ui_MainWindow(object):
         self.surfBtn.clicked.connect(self.toggle_surf)
         self.actionNew.triggered.connect(self.add_tab)
         self.actionOpen.triggered.connect(self.open_file)
-        self.actionSave.triggered.connect(self.save_tab)
+        self.actionSave.triggered.connect(lambda: self.save_tab(self.editorWidget.currentIndex()))
         self.actionSave_as.triggered.connect(lambda: self.save_tab(dialog=True))
         #self.actionQuit.triggered.connect()
         #self.actionPreferences.triggered.connect()
@@ -422,23 +425,70 @@ class Ui_MainWindow(object):
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
 
-    def add_tab(self):
-        pass
+    def update_browsers(self, filename):
+        local_url = QUrl.fromLocalFile(filename)
+        self.browser1080.load(local_url)
+        self.browser720.load(local_url)
+        self.browserMobile.load(local_url)
 
-    def new_tab(self):
-        pass
+    def add_tab(self):
+        self.new_tab('untitled')
+
+    def new_tab(self, tab_name):
+        new_widget = QWidget(self.editorWidget)
+        new_edit = QTextEdit(new_widget)       
+        self.sizePolicy.setHeightForWidth(new_widget.sizePolicy().hasHeightForWidth())
+        new_widget.setSizePolicy(self.sizePolicy)        
+        self.sizePolicy1.setHeightForWidth(new_edit.sizePolicy().hasHeightForWidth())
+        new_edit.setSizePolicy(self.sizePolicy1)
+        # Create a QVBoxLayout and add the QTextEdit to it
+        layout = QVBoxLayout()
+        layout.addWidget(new_edit)
+        # Set the layout to the new_widget
+        new_widget.setLayout(layout)        
+        self.editor_tabs.append(new_edit)
+        self.editorWidget.addTab(new_widget, tab_name)
     
     def remove_tab(self):
-        pass
+        active_tab_index = self.editorWidget.currentIndex()
+        active_tab_name = self.editorWidget.tabText(active_tab_index)
+        self.editorWidget.removeTab(active_tab_index)
+        self.editor_tabs.pop(active_tab_index)
+        if active_tab_name in self.open_files.keys():
+            del self.open_files[active_tab_name]
     
-    def save_tab(self):
-        pass
+    def save_tab(self, idx, dialog=False):        
+        active_tab_name = self.editorWidget.tabText(idx)
+        if active_tab_name in self.open_files.keys() and dialog == False:
+            filename = self.open_files[active_tab_name]
+        else:
+            # Open the save file dialog
+            options = QFileDialog.Options()
+            filename, _ = QFileDialog.getSaveFileName(None, "Save as...", "",
+                                "All Files (*);;HTML Files (*.html);;CSS Files (*.css);;Javascript Files (*.js)", options=options)
+        if filename:
+            html = self.editor_tabs[idx].toPlainText()
+            with open(filename, 'w', encoding='utf-8') as fn:
+                fn.writelines(html)
+        self.update_browsers(filename)
     
     def save_all(self):
-        pass
+        for i in range(len(self.editor_tabs)):
+            self.save_tab(i)
     
     def open_file(self):
-        pass
+        filename, _ = QFileDialog.getOpenFileName(None, "Open", "",
+                    "All Files (*);;HTML Files (*.html);;CSS Files (*.css);;Javascript Files (*.js)")
+        tab_name = filename.split('/')[-1]
+        if filename:
+            if tab_name not in self.open_files.keys():            
+                self.open_files[tab_name] = filename
+                self.new_tab(tab_name)
+                with open(filename, 'r', encoding='utf-8') as fn:
+                    text = fn.readlines()
+                text = ''.join(text)
+                self.editor_tabs[-1].insertPlainText(text)
+            self.update_browsers(filename)
     
     def toggle_surf(self):
         if self.surfMenu.isHidden():
