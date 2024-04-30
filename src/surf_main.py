@@ -3,12 +3,6 @@
 #Sun Apr 28 06:40:48 PM +07 2024
 #surf_main.py
 
-import PySide6
-from qt_material import apply_stylesheet
-import sys
-from surf_logging import set_logging
-from surf_filepaths import Files
-
 # -*- coding: utf-8 -*-
 
 ################################################################################
@@ -19,114 +13,92 @@ from surf_filepaths import Files
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
+import PySide6
+from qt_material import apply_stylesheet
+import sys
+from surf_logging import set_logging
+from surf_filepaths import Files
+from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor)
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
+    QMetaObject, QObject, QPoint, QRect, QStringListModel, QTimer, 
     QSize, QTime, QUrl, Qt)
 from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QCursor, QFont, QFontDatabase, QGradient, QTextFormat, 
-    QIcon, QImage, QKeySequence, QLinearGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient, QKeyEvent, 
     QPainter, QPalette, QPixmap, QRadialGradient,
-    QTransform)
+    QTransform, QTextCursor)
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QMainWindow,
-    QMenu, QMenuBar, QPushButton, QSizePolicy,
+    QMenu, QMenuBar, QPushButton, QSizePolicy, QCompleter, 
     QStatusBar, QTabWidget, QTextEdit, QVBoxLayout,
     QWidget, QFileDialog, QSplitter, QPlainTextEdit)
 
-class LineNumberArea(QWidget):
-    def __init__(self, editor):
-        super().__init__(editor)
-        self.codeEditor = editor
+class CustomCompleter(QCompleter):
+    def __init__(self, vocabulary, parent=None):
+        super(CustomCompleter, self).__init__(vocabulary, parent)
+        self.setPopup(QCompleter.popup(self))  # Ensure the popup is created
+        self.popup().setStyleSheet("""
+            QListView {
+                border: 1px solid #ffa458;
+                line-height: 0.4;
+            }
+        """)
+        self.popup().setCurrentIndex(self.completionModel().index(0, 0))
 
-    def sizeHint(self):
-        return QSize(self.codeEditor.lineNumberAreaWidth(), 0)
-
-    def paintEvent(self, event):
-        self.codeEditor.lineNumberAreaPaintEvent(event)
-
-class CodeEditor(QPlainTextEdit):
+class Ui_MainWindow(QMainWindow):
     def __init__(self, parent=None):
-        super().__init__(parent)
-        self.lineNumberArea = LineNumberArea(self)
-
-        self.textChanged.connect(self.updateLineNumberAreaWidth)
-        self.verticalScrollBar().valueChanged.connect(self.updateLineNumberArea)
-        self.cursorPositionChanged.connect(self.highlightCurrentLine)
-
-        self.updateLineNumberAreaWidth(0)  # Initial update with default value
-
-    def lineNumberAreaWidth(self):
-        lines = self.document().blockCount()
-        digits = len(str(lines))
-        space = 3 + self.fontMetrics().horizontalAdvance('9') * digits
-        return space
-
-    def updateLineNumberAreaWidth(self, _=0):
-        self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
-
-    def updateLineNumberArea(self, _=0):
-        self.lineNumberArea.update()
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        cr = self.contentsRect()
-        self.lineNumberArea.setGeometry(cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height())
-
-    def lineNumberAreaPaintEvent(self, event):
-        painter = QPainter(self.lineNumberArea)
-        painter.fillRect(event.rect(), QColor(Qt.white))
-
-        block = self.firstVisibleBlock()
-        blockNumber = block.blockNumber()
-        top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
-        bottom = top + self.blockBoundingRect(block).height()
-
-        # Adjust the starting block number to account for any initial blocks that are not visible
-        blockNumber += 1
-
-        while block.isValid() and top <= event.rect().bottom():
-            if block.isVisible() and bottom >= event.rect().top():
-                number = str(blockNumber)
-                painter.setPen(Qt.black)
-                painter.drawText(0, top, self.lineNumberArea.width(), self.fontMetrics().height(),
-                                 Qt.AlignRight, number)
-
-            block = block.next()
-            top = bottom
-            bottom = top + self.blockBoundingRect(block).height()
-            blockNumber += 1
-
-    def highlightCurrentLine(self):
-        extraSelections = []
-
-        if not self.isReadOnly():
-            selection = QTextEdit.ExtraSelection()
-
-            lineColor = QColor(Qt.yellow).lighter(160)
-            selection.format.setBackground(lineColor)
-            selection.format.setProperty(QTextFormat.FullWidthSelection, True)
-            selection.cursor = self.textCursor()
-            selection.cursor.clearSelection()
-            extraSelections.append(selection)
-
-        self.setExtraSelections(extraSelections)
-    def highlightCurrentLine(self):
-        extraSelections = []
-
-        if not self.isReadOnly():
-            selection = QTextEdit.ExtraSelection()
-
-            lineColor = QColor(Qt.black).lighter(160)
-
-            selection.format.setBackground(lineColor)
-            selection.format.setProperty(QTextFormat.FullWidthSelection, True)
-            selection.cursor = self.textCursor()
-            selection.cursor.clearSelection()
-            extraSelections.append(selection)
-
-        self.setExtraSelections(extraSelections)
+        super(Ui_MainWindow, self).__init__(parent)
+    def setup_completer(self, text_editor, MainWindow):
+        # Vocabulary for HTML, CSS, and JavaScript
+        self.vocabulary = [
+            "<html>", "<head>", "<body>", "<script>", "<div>", "<span>", "<style>",
+            "var", "let", "const", "function", "return", "if", "else", "for", "while",
+            "background-color:", "font-size:", "text-align:", "display:", "color:",
+            "document.getElementById", "addEventListener", "window.onload"
+        ]
         
-class Ui_MainWindow(object):
+        self.completer = CustomCompleter(self.vocabulary)
+        self.completer.setModel(QStringListModel(self.vocabulary))
+        self.completer.setWidget(text_editor)
+        self.completer.setCompletionMode(QCompleter.PopupCompletion)
+        self.completer.activated.connect(lambda completion: self.insertCompletion(completion, text_editor))        
+        # Install the event filter to capture Tab key press
+        text_editor.installEventFilter(self)
+        # Handle Tab key in the text editor's event filter
+    def eventFilter(self, obj, event):
+        if obj == self.textEdit and event.type() == QKeyEvent.KeyPress:
+            if event.key() == Qt.Key_Tab and self.completer.popup().isVisible():
+                # Simulate pressing the Enter key to select the completion
+                QApplication.sendEvent(self.completer.popup(), QKeyEvent(QKeyEvent.KeyPress, Qt.Key_Enter, event.modifiers()))
+                return True
+            elif event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
+                if self.completer.popup().isVisible():
+                    event.accept()
+                    return True
+        return super(Ui_MainWindow, self).eventFilter(obj, event)
+        
+    def show_completer(self):
+        self.completer.complete()    
+        
+    def insertCompletion(self, completion, text_editor):
+        tc = text_editor.textCursor()
+        extra = len(completion) - len(self.completer.completionPrefix())
+        tc.movePosition(QTextCursor.Left)
+        tc.movePosition(QTextCursor.EndOfWord)
+        tc.insertText(completion[-extra:])
+        text_editor.setTextCursor(tc)
+    
+    def updateCompleterPosition(self, text_editor):
+        tc = text_editor.textCursor()
+        tc.select(QTextCursor.WordUnderCursor)
+        self.completer.setCompletionPrefix(tc.selectedText())
+        if self.completer.completionPrefix() != "":
+            self.completer.complete()
+        cr = text_editor.cursorRect(tc)
+        cr.setWidth(self.completer.popup().sizeHintForColumn(0)
+                    + self.completer.popup().verticalScrollBar().sizeHint().width())
+        self.completer.complete(cr)  # Popup it up!    
+        
     def setup_menu(self, MainWindow):
         self.actionNew = QAction(MainWindow)
         self.actionNew.setObjectName(u"actionNew")
@@ -229,6 +201,12 @@ class Ui_MainWindow(object):
 
         self.gridLayout.addWidget(self.editorWidget)
         self.gridLayout.addWidget(self.splitWidget)
+        self.highlighter = HtmlCssJsHighlighter(self.textEdit.document())
+        self.highlighter = HtmlCssJsHighlighter(self.textEdit_2.document())
+        self.setup_completer(self.textEdit, self)
+        self.textEdit.cursorPositionChanged.connect(lambda: self.updateCompleterPosition(self.textEdit))
+        #self.setup_completer(self.textEdit_2, MainWindow)
+        #self.textEdit_2.cursorPositionChanged.connect(self.updateCompleterPosition)
 
     def setup_browser(self, MainWindow):
         self.tabWidget = QTabWidget(self.centralwidget)
@@ -414,7 +392,7 @@ class Ui_MainWindow(object):
 
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
-            MainWindow.setObjectName(u"MainWindow")
+            MainWindow.setObjectName(u"SURF -- Shorecode LLC")
         MainWindow.resize(1800, 1000)
         MainWindow.setStyleSheet(
             u'''QMenuBar::item:pressed{
@@ -430,8 +408,12 @@ class Ui_MainWindow(object):
             QMenu::item:selected{
             background-color:#ffa458;
             color:#000000;
-            }''')        
-        
+            }''')
+        files = Files()
+        filepaths = files.get_files_list()
+        self.logger = set_logging('surf', filepaths[0])
+        MainWindow.setWindowIcon(QIcon(filepaths[1]))        
+                
         self.editor_tabs = list()
         self.open_files = dict()
         
@@ -480,7 +462,6 @@ class Ui_MainWindow(object):
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
-
         self.surfMenu.hide()
 
         self.retranslateUi(MainWindow)
@@ -488,7 +469,7 @@ class Ui_MainWindow(object):
         self.actionNew.triggered.connect(self.add_tab)
         self.actionOpen.triggered.connect(self.open_file)
         self.actionSave.triggered.connect(lambda: self.save_tab(self.editorWidget.currentIndex()))
-        self.actionSave_as.triggered.connect(lambda: self.save_tab(dialog=True))
+        self.actionSave_as.triggered.connect(lambda: self.save_tab(self.editorWidget.currentIndex(), dialog=True))
         self.actionQuit.triggered.connect(sys.exit)
         #self.actionPreferences.triggered.connect()
         #self.actionAbout_Surf.triggered.connect()
@@ -529,18 +510,21 @@ class Ui_MainWindow(object):
 
     def new_tab(self, tab_name):
         new_widget = QWidget(self.editorWidget)
-        new_edit = QTextEdit(new_widget)       
+        new_edit = CodeEditor(new_widget)       
         self.sizePolicy.setHeightForWidth(new_widget.sizePolicy().hasHeightForWidth())
         new_widget.setSizePolicy(self.sizePolicy)        
         self.sizePolicy1.setHeightForWidth(new_edit.sizePolicy().hasHeightForWidth())
         new_edit.setSizePolicy(self.sizePolicy1)
+        self.highlighter = HtmlCssJsHighlighter(new_edit.document())
         # Create a QVBoxLayout and add the QTextEdit to it
         layout = QVBoxLayout()
         layout.addWidget(new_edit)
-        # Set the layout to the new_widget
+        # Set the layout to the new_widget        
         new_widget.setLayout(layout)        
         self.editor_tabs.append(new_edit)
         self.editorWidget.addTab(new_widget, tab_name)
+        self.setup_completer(self.textEdit, self)
+        self.textEdit.cursorPositionChanged.connect(lambda: self.updateCompleterPosition(self.textEdit))        
     
     def remove_tab(self):
         active_tab_index = self.editorWidget.currentIndex()
@@ -566,7 +550,8 @@ class Ui_MainWindow(object):
             self.update_browsers(filename)
             # Update the tab name with the filename extracted from the path
             new_tab_name = filename.split('/')[-1]
-            self.editorWidget.setTabText(idx, new_tab_name)        
+            self.editorWidget.setTabText(idx, new_tab_name)
+            self.open_files[new_tab_name] = filename
         
     def save_all(self):
         for i in range(len(self.editor_tabs)):
@@ -585,6 +570,7 @@ class Ui_MainWindow(object):
                 text = ''.join(text)
                 self.editor_tabs[-1].insertPlainText(text)
             self.update_browsers(filename)
+            self.editorWidget.setCurrentIndex(len(self.editor_tabs)-1)
     
     def toggle_surf(self):
         if self.surfMenu.isHidden():
@@ -637,16 +623,13 @@ class Ui_MainWindow(object):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     
-    # Create an instance of QMainWindow or a subclass of it
-    mainWindow = QMainWindow()
-    
     # Apply your UI setup to this main window instance
     ui = Ui_MainWindow()
-    ui.setupUi(mainWindow)  # Pass the instance to setupUi
+    ui.setupUi(ui)  # Pass the instance to setupUi
     
     # setup stylesheet
     apply_stylesheet(app, theme='dark_orange.xml')
     # Show the main window
-    mainWindow.show()
+    ui.show()
 
     sys.exit(app.exec())

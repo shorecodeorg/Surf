@@ -1,7 +1,1931 @@
+<!DOCTYPE html>
 <html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="language" content="English">
+    <title>Batterywiz</title>
+    <meta name="description" content="Ecoveta's Batterywiz tool will solve all your battery configuration problems">
+    <meta name="robots" content="index, follow">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/slickgrid@5.8.1/dist/styles/css/slick-alpine-theme.min.css">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link href="{{ url_for('static', filename='ecoveta.css') }}" rel="stylesheet">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='dropdown.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='spinner.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='chatgpt.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='neontoggle.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='diaggui.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='menus.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='gui.css') }}"
+    />
+    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@6.0.0/dist/js/tabulator.min.js"></script>
+
+<style>
+/*
+3rd party sources (thank you!):
+https://codepen.io/flavio_amaral/pen/xxqQLoa
+https://codepen.io/alvaromontoro/pen/ExMvdxV
+https://tabulator.info/
+author: Shorecode LLC (https://shorecode.org)
+*/
+    @import url("https://fonts.googleapis.com/css2?family=Poppins&display=swap");
+    .dropdown-container {
+      height:30px;
+      overflow: visible;
+    }
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-color: white;
+      --primary-bg-color: white;
+      --primary-color: #7cc242;
+      --text-color: rgb(10,10,10,1);
+      --text-active: #ffffff;
+      --button-hover-bg-color: #2b2e34;
+      --border-color: #494d59;
+      --dropdown-height: 0;
+      --rotate-arrow: 0;
+      --translate-value: 0;
+      --list-opacity: 0;
+      --transition-time: 0.4s;
+      --transition-timing: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      --border-radius: 1.4rem;
+      --list-button-height: 2rem;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        transition: 0.5s;
+    }
+    button {
+        width: 10%;
+        padding: 10px;
+        background-color: #99d6ff;
+        color: white;
+        border-radius: 5px;
+        cursor: pointer;
+        text-align: center;
+        border: 0px;
+    }
+    .dropdown-button {
+      font-family: "Poppins", sans-serif;
+      font-weight: 400;
+      font-size: 16px;
+      width: auto;
+      background-color: #fff;
+      color: black;
+      display: flex;
+      align-items: center;
+      padding: 0 1.8rem;
+    }
+    button:hover {
+        background-color: #1aa3ff;
+    }
+    .sheet-item-button {
+        width: 100%;
+        padding: 5px;
+        padding-bottom: 2vw;
+        color: black;
+        font-size: 0.75vw;
+        background-color: #fff;
+    }
+    #tabs {
+        margin-top: 0.185%;
+    }
+    .ht_master .wtHolder {
+        height: auto !important;
+    }
+    #banner {
+        padding: 10px;
+        display:block;
+    }
+    #container {
+    }
+    .tables {
+        overflow-y:scroll;
+        overflow-x:scroll;
+    }
+    hr {
+        border: 0;
+        height: 0;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        border-bottom: 1px solid #99d6ff;
+    }
+    .parent {
+      margin-top: -1.6%;
+      display: grid;
+      grid-template-columns: 10% 70% 18%;
+      grid-template-rows: 35vw 5% 2.5vw;
+      gap: 10px;
+      padding: 10px;
+    }
+    .right {
+        text-align:right;
+    }
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 10;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+        padding-top: 60px;
+    }
+    .modal-content {
+        background-color: #fefefe;
+        margin: 5% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 400px;
+    }
+    .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+    .close:hover,
+    .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    #spreadsheet {
+        overflow-y: hidden;
+        overflow-x: hidden;
+        height: calc(100% - .sheet-bar.offsetHeight);
+        max-height:100%;
+        border: solid;
+        border-radius: 5px;
+        border-color: #075485;
+        z-index: 4;
+        position: relative;
+        background: #fff;
+    }
+    .spread-container {
+        grid-column-start: 2
+        grid-column-end: 3;
+        grid-row-start: 1;
+        grid-row-end:2;
+        width:100%;
+        height:100%;
+        background-color: #fff;
+        overflow-y: hidden;
+        overflow-x: hidden;
+    }
+    .tool-tip {
+        grid-column-start: 2;
+        grid-column-end: 4;
+        grid-row-start: 3;
+        grid-row-end:4;
+        font-size: 13px;
+        height:100%;
+        width:100%;
+    }
+    .fourth-area {
+    grid-row-start: 1;
+    grid-column-start: 3;
+    grid-row-end: 3;
+    margin-top: 1.5%;
+    width:100%;
+    height:100%;
+    padding-top: 60px;
+    }
+    .soc-table-image:hover {
+     opacity: 0.65;
+    }
+    .modal-content {
+        position: absolute;
+        top: 50%;
+        left:40%;
+    }
+
+    .close-btn {
+        cursor: pointer;
+    }
+    #tabs {
+        height:4vw;
+    }
+    .edit-box {
+        padding: 6px 4px;
+    }
+    .dropdown-box {
+        padding: 6px 4px;
+    }
+    .image-right {
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+    }
+    .wrapper {
+      padding: 0;
+      position: relative;
+      overflow-x: hidden;
+      max-width: 100%;
+      background: #fff;
+      border-radius: 5px;
+      border-color: #075485;
+    }
+    .image-change {
+        display: inline-block;
+        margin: 0.5vw;
+        margin-top: 0;
+        width: auto;
+        background:#075485;
+    }
+
+    .switch-template {
+        display: none;
+    }
+    .cell-dropdown-arrow {
+        float: right;
+    }
+    #addRowBtn,
+    #deleteRowBtn,
+    #addColBtn,
+    #deleteCol {
+        display: none;
+    }
+
+</style>
+</head>
 <body>
-<div>
-hello
+<div class='main'>
+    <div class="menu-container">
+        <button class="scroll-btn left" onclick="goLeft()">‹</button>
+        <div class="menu-wrapper">
+            <img id="banner" src="{{ url_for('static', filename='Ecoveta_banner.png') }}" alt="Ecoveta"></img>
+            <ul id="menu-bar" class="menu-bar">
+                <!-- Menu items will be injected here -->
+            </ul>
+        </div>
+        <button class="scroll-btn right" onclick="scrollRight()">›</button>
+    </div>
+
+    <div id="container">
+
+        <div id="tabs">
+        </div>
+        <div class="loading">Loading&#8230;</div>
+        <div class='parent'>
+            <div class="config-menu table-section">
+                <ul class="left-menu">
+
+                </ul>
+            </div>
+            <div class='spread-container'>
+                <div class="wrapper">
+                  <div class="icon"><i id="left" class="fa-solid fa-angles-left"></i></div>
+                  <ul class="tabs-box" id="sheet-bar">
+                 	<!-- Additional sheets will be added dynamically -->
+                  </ul>
+                  <div class="icon"><i id="right" class="fa-solid fa-angles-right"></i></div>
+                </div>
+              <div id="spreadsheet">Loading...</div>
+            </div>
+            <div class='fourth-area'>
+                <center>
+                    <div id='image-selection'></div>
+                </center>
+                <div class='table-image'></div>
+                <div class='help-btn'><center><img class='help-image' src="{{ url_for('static', filename='help7.png') }}" onclick="handleHelpClick()"></img></center>
+                    <div class="help-overlay">
+                        <div class="overlay-text">Ask A Question!</div>
+                    </div>
+                </div>
+            </div>
+            <div class='buttons'>
+              <button id="uploadBtn" class="under-table-button">Upload</button>
+              <button id="downloadBtn" class="under-table-button">Download</button>
+              <button id="addRowBtn" class="under-table-button">Add Row</button>
+              <button id="deleteRowBtn" class="under-table-button">Del Row</button>
+              <button id="addColBtn" class="under-table-button">Add Col</button>
+              <button id="deleteCol" class="under-table-button">Del Col</button>
+              <button id="okBtn" class="under-table-button">Save</button>
+              <button id="cancelBtn" class="under-table-button">Cancel</button>
+            </div>
+
+          <div class="tool-tip table-section"></div>
+        </div>
+    </div>
 </div>
+
+
+<div id="add-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-add close-btn">&times;</span>
+        <p>Column:</p>
+        <input type="text" id="newColumn">
+        <input type="text" id="newNum">
+        <button id="colBtn">Add Column</button>
+    </div>
+</div>
+
+<div id="upload-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-upload close-btn">&times;</span>
+        <p>New Battery Profile Name:</p>
+        <input type="text" id="upload">
+        <button id="uploadBtn">Upload Profile</button>
+    </div>
+</div>
+
+<div class="chat-gpt-result"></div>
+
+<div class="cgpt-modal-parent">
+    <div class="cgpt-modal">
+        <br>
+        <textarea class="cgpt-input" rows="10" name="textEntry" placeholder="Enter your question for ChatGPT here..."></textarea>
+        <button id='chat-gpt-submit'>Submit</button>
+        <span class="x" draggable="true">&times;</span>
+    </div>
+</div>
+
+<div class="dropdown-container dropdown-template">
+  <button class="dropdown-button main-button">
+    <span class="dropdown-title text-truncate"></span>
+    <span class="dropdown-arrow">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z" />
+      </svg>
+    </span>
+  </button>
+  <div class="dropdown-list-container">
+    <div class="dropdown-list-wrapper">
+      <ul class="dropdown-list"></ul>
+    </div>
+  </div>
+</div>
+<input type="checkbox" role="switch" class="neon switch-template">
+
+<script>
+
+    // Data, username and profiles injected from Flask
+    var username = "{{ username }}";
+    var profiles = JSON.parse('{{ profiles | tojson }}');
+    var profile = '{{ profile }}';
+    // Try parsing it
+    try {
+        param_table = JSON.parse('{{ param_table | tojson }}');
+    } catch (e) {
+        console.error("Parsing error:", e);
+    }
+
+    function setToolTip(toolTipKey, ele, tooltips, tableName=null) {
+        ele.addEventListener('mouseenter', () => {
+            var toolTip = document.getElementsByClassName('tool-tip')[0];
+            var toolTipText = tooltips[toolTipKey];
+            // for table data
+            if(tableName) {
+                toolTipText = tooltips[tableName][toolTipKey];
+                // for entries that are calulated and not part of table data
+                if(toolTipText===undefined) {
+                    toolTipText = tooltips[toolTipKey];
+                }
+            }
+            // Clears old tooltip
+            toolTip.innerHTML = '';
+            toolTip.innerHTML = toolTipText;
+        });
+    }
+
+    //Build Tabulator, tableName from excel sheet name. idx can be obtained
+    //from looking at param_table
+    function buildTable(tableName, idx, tooltips) {
+        var cellParamNames = [
+                'Chg(10Sec)',
+                'Chg(Cont)',
+                'Chg(Inst)',
+                'Dch(10Sec)',
+                'Dch(Cont)',
+                'Depolar Time',
+                'Hysteresis',
+                'OCV',
+                'Res(10Sec)',
+                'Res(Cont)',
+                'Res(Inst)',
+        ];
+        return new Promise((resolve, reject) => {
+            //Remove contents of the table element and chart element
+            var myNode = document.getElementById("spreadsheet");
+            var imgDiv = document.getElementsByClassName("table-image")[0];
+            var imageBtns = document.getElementById('image-selection');
+            try {
+                myNode.innerHTML = '';
+                imgDiv.innerHTML = '';
+                imageBtns.innerHTML = '';
+            } catch (e) {
+                console.error("Spreadsheet clear error:", e);
+                reject(e); // Reject the promise if there's an error
+            }
+            //Set the background for the current element in the tabs so
+            //it indicates the table is active
+            currentEle = document.getElementsByClassName(tableName.replace(/\s+/g, '') + 'MenuBtn')[0];
+            document.querySelector('.active').classList.remove('active');
+            currentEle.classList.add('active');
+
+            var unitTables = ['Manufacturer Spec', 'Charge', 'Limits', 'Precharge', 'Current Sense']
+            // Removes unit cells that have None as value
+            // Adds the unit value to the parameter name (compacting)
+            if(unitTables.includes(tableName)) {
+                param_table[idx][tableName].forEach((row, i) => {
+                    if(i > 0 && param_table[idx][tableName][i]['Units'] != 'None'){
+                        row['Parameter'] += ' (' + param_table[idx][tableName][i]['Units'] + ')';
+                    }
+                    delete param_table[idx][tableName][0][2];
+                });
+            }
+            //Gets row data
+            let tableData = Object.keys(param_table[idx][tableName].slice(1)).map(key => param_table[idx][tableName].slice(1)[key]);
+            // Gets columns
+            var columnsData = param_table[idx][tableName][0];
+            //dropdown menus
+            var menus = {
+                'Cell Chemistry': {
+                    'options':
+                    [
+                    'NMC', 'NCA', 'LFP'
+                    ],
+                    'row': 3
+                },
+                'Cell Type': {
+                    'options':
+                    [
+                    'Cylindrical',
+                    'Prismatic',
+                    'Pouch'
+                    ],
+                    'row': 4
+                },
+                'Fet': {
+                    'options':
+                    [
+                        'Single',
+                        'Positive Side Switching',
+                        'Dual'
+                    ],
+                    'row': 1
+                },
+                'Type': {
+                    'options':
+                    [
+                        'Voltage based',
+                        'Charge based'
+                    ],
+                    'row': 1
+                }
+            };
+
+    // customEditor is for single cell dropdown menus
+    var dropDownColumns = ['Value', 'Charge/Discharge Control'];
+    columnsData.forEach((column, index) => {
+        if(dropDownColumns.includes(column.field)){
+            column.editor = customEditor;
+            // Add a formatter to display the dropdown icon
+            column.formatter = formatCell;
+        }
+
+
+    });
+
+    function formatCell(cell, formatterParams, onRendered) {
+
+                var dropDownRows = [3, 4];
+                var rowName = cell.getRow().getPosition();
+                if(dropDownRows.includes(rowName)){
+                  result =cell.getValue() + '<span class="cell-dropdown-arrow">⌄</span>'; // Append dropdown icon to cell value;
+                    return result
+                } else {
+                    return cell.getValue();
+
+                }
+            }
+
+    // Define the custom editor for the dropdown
+    function customEditor(cell, onRendered, success, cancel, editorParams) {
+        var dropDownRows = ['Cell Type', 'Cell Chemistry'];
+        var rowName = cell.getRow().getCells()[0]._cell.value;
+        var editor = null;
+        if(dropDownRows.includes(rowName)){
+            // initializes editor variable
+            editor = document.createElement("select");
+            editor.style.display = "none"; // Initially hide the select
+            var rowPos = cell.getRow().getPosition();
+            editorId = 'dd-' + rowPos;
+            editor.setAttribute('id', editorId);
+            // Attempt to get menu options
+            var values = menus[rowName] && menus[rowName]['options'] ? menus[rowName]['options'] : [];
+
+            // Define dropdown options
+            values.forEach(function(opt) {
+                var option = document.createElement("option");
+                option.value = opt;
+                option.text = opt;
+                editor.appendChild(option);
+            });
+
+        } else {
+                // For rows other than cell type or chemistry, return a text input node
+                editor = document.createElement("input");
+                editor.type = "text";
+                // Sets class for CSS styling
+                editor.setAttribute('class', 'edit-box');
+        }
+
+        // Sets class for CSS styling
+        editor.setAttribute('class', 'dropdown-box');
+
+        // Append editor to the cell
+        cell.getElement().appendChild(editor);
+
+        // Set starting editor value
+        editor.value = cell.getValue();
+
+        onRendered(function(){
+            editor.style.cssText = "width:100%;";
+        });
+
+        // When the value has been set
+        editor.addEventListener("change", function(){
+            success(editor.value);
+            editor.style.display = "none"; // Hide the select after selection
+        });
+
+        // If the user cancels the edit
+        editor.addEventListener("blur", function(){
+            cancel();
+            editor.style.display = "none"; // Hide the select when not focused
+        });
+
+        return editor;
+
+    }
+
+            // Adds dropdown menus to Value columns
+            columnsData.forEach((column, index) => {
+                if(column.field==='Value'){
+                  column['editor'] = customEditor;
+            		}
+            });
+            // Determines the longest entry in the table, for setting width later
+            var maxLength = [];
+            Object.values(param_table[idx][tableName]).forEach(entry => {
+                Object.values(entry).forEach((cell,col) => {
+            		var cellValue = cell.title;
+            		if(cellValue===undefined) {
+            			cellValue = cell;
+            		}
+            		var cellLen = cellValue.length;
+            		if (cellLen > maxLength[col]) {
+            			maxLength[col] = cellLen;
+            		}
+            	});
+            });
+            // Sets the width of cells to the maximum length in the data
+            // Only applies to tables that are included in teh cellParamNames list
+            if(!cellParamNames.includes(tableName)) {
+                // Set columns width
+                columnsData.forEach((column, index) => {
+                    column.width = Math.ceil(maxLength[index] * 8.6);
+                });
+            }
+            // Function to update cell value
+            function updateCellValue(item) {
+                cell.setValue(item.innerHTML);
+                menu.style.display = "none"; // Hide the menu after selection
+            }
+            //Makes the first column always shown
+            columnsData[0]['frozen'] = true;
+            if(tableName==='Manufacturer Spec') {
+                editTrigger = 'click';
+            } else {
+                editTrigger = 'dblclick';
+            }
+            var table = new Tabulator("#spreadsheet", {
+                columns: columnsData,
+                movableRows: true, //enable user movable rows
+                movableColumns: true, //enable user movable columns
+                columnDefaults:{
+                  //allow editing on all columns
+                  width: 80,
+                  editor: true,
+                  //algo for tooltips. el is a placeholder for default function
+                  tooltip: function(e, cell, onRendered) {
+                    var el = document.createElement('div');
+                    var toolTip = document.getElementsByClassName('tool-tip')[0];
+                    var toolTipText = tooltips[tableName + 'MenuBtn'];
+                    el.innerHTML = toolTipText;
+                    // Clears old tooltip
+                    toolTip.innerHTML = '';
+                    toolTip.innerHTML = toolTipText;
+                    // remove the comment below to hvae old fashioned popup tooltips
+                    //return el;
+                  },
+                  headerTooltip: function(e, col, onRendered) {
+                    var el = document.createElement('div');
+                    var toolTip = document.getElementsByClassName('tool-tip')[0];
+                    var toolTipText = tooltips[tableName][col.getDefinition().title];
+                    el.innerHTML = col.getDefinition().title;
+                    // Clears old tooltip
+                    toolTip.innerHTML = '';
+                    toolTip.innerHTML = toolTipText;
+                    // remove the comment below to hvae old fashioned popup tooltips
+                    //return el;
+                  }
+                },
+                data:tableData, //load data into table
+                //No sorting
+                headerSort: false,
+
+                //enable range selection
+                selectableRange:1,
+                selectableRangeColumns:true,
+                selectableRangeRows:true,
+                selectableRangeClearCells:true,
+
+                //change edit trigger mode to make cell navigation smoother
+                editTriggerEvent: editTrigger,
+
+                //configure clipboard to allow copy and paste of range format data
+                clipboard:true,
+                clipboardCopyStyled:false,
+                clipboardCopyConfig:{
+                    rowHeaders:false,
+                    columnHeaders:false,
+                },
+                clipboardCopyRowRange:"range",
+                clipboardPasteParser:"range",
+                clipboardPasteAction:"range",
+
+                headerSortClickElement:"icon",
+            });
+
+            //Adds charts or image to the right of table
+            const img = document.createElement('img');
+            const img_link = document.createElement('a');
+            const btn3d = document.createElement('button');
+            const btn2d = document.createElement('button');
+            setToolTip('2dbtn', btn2d, tooltips);
+            setToolTip('3dbtn', btn3d, tooltips);
+            img.classList.add("image-right");
+            img_link.classList.add("image-link");
+            btn3d.classList.add("image-change");
+            btn2d.classList.add("image-change");
+            btn3d.id = '3dbtn';
+            btn2d.id = '2dbtn';
+            btn3d.innerHTML = '3D';
+            btn2d.innerHTML = '2D';
+            const imgFile = tableName + ".png";
+            const imgFile3d = tableName + "3d.png";
+            const imgLink = tableName + ".html";
+            const imgLink3d = tableName + "3d.html";
+            baseUrl = "https://shorecode2.pythonanywhere.com/serve_image/" +username + "/" + profile + "/";
+            imgUrl = baseUrl + imgFile;
+            imgUrl3d = baseUrl + imgFile3d;
+            imgLinkUrl = baseUrl + imgLink;
+            imgLinkUrl3d = baseUrl + imgLink3d;
+            img_link.setAttribute('href', imgLinkUrl);
+            img_link.setAttribute('target', '_blank');
+            img.setAttribute('src', imgUrl);
+            // Adds nodes when the table has charts
+            if(cellParamNames.includes(tableName)) {
+                img.classList.add('soc-table-image');
+                imageSelection = document.querySelector('#image-selection');
+                imageSelection.appendChild(btn2d);
+                imageSelection.appendChild(btn3d);
+                img_link.appendChild(img);
+                imgDiv.appendChild(img_link);
+                // Get the image element
+                const imageElement = document.getElementsByClassName('image-right')[0];
+                // Add event listener to the 3D button
+                document.getElementById('3dbtn').addEventListener('click', () => {
+                  imageElement.src = imgUrl3d;
+                  img_link.setAttribute('href', imgLinkUrl3d);
+                  setToolTip('3dbtn');
+                });
+                  // Add event listener to the 2D button
+                  document.getElementById('2dbtn').addEventListener('click', () => {
+                  imageElement.src = imgUrl;
+                  img_link.setAttribute('href', imgLinkUrl);
+                });
+            } else {
+                // Adds image when no chart is needed
+                imgDiv.appendChild(img);
+            }
+
+            resolve(table); // Resolve the promise with the table object
+        });
+    }
+
+    // Clears tooltips when nothing is hovered
+    document.addEventListener('mouseover', ()=>{
+        var toolTip = document.getElementsByClassName('tool-tip')[0];
+        toolTip.innerHTML = '';
+    });
+
+    // Get dict key by searching value
+    function getKeyByValue(object, value) {
+      return Object.keys(object).find(key => object[key] === value);
+    }
+
+    function addBasicImage(imgName, tooltips) {
+        //Adds charts or image to the right of GUI/table
+        const img = document.createElement('img');
+        img.classList.add("image-right");
+        const imgFile = imgName + ".png";
+        baseUrl = "https://shorecode2.pythonanywhere.com/serve_image/" +username + "/" + profile + "/";
+        imgUrl = baseUrl + imgFile;
+        img.setAttribute('src', imgUrl);
+        var imgDiv = document.getElementsByClassName("table-image")[0];
+        imgDiv.innerHTML = '';
+        imgDiv.appendChild(img);
+    }
+
+    // functions below are for the GUI interaction elements
+    function createTextEntry(node, value) {
+        var textEntry = document.createElement('input');
+        textEntry.value = value;
+        node.appendChild(textEntry);
+    }
+
+    function createToggle(node) {
+        var toggleTemplate = document.getElementsByClassName('switch-template')[0];
+        var clonedToggle = toggleTemplate.cloneNode(true);
+        clonedToggle.classList.remove("switch-template");
+        node.appendChild(clonedToggle);
+    }
+
+    function createStaticText(node, value) {
+        var staticText = document.createElement('span');
+        staticText.innerHTML = value;
+        node.appendChild(staticText);
+    }
+
+
+    function populateDropDown(dropDownList, dropDownTitle, listItems, arrow, wrapper) {
+        // dropDown menu
+        var mainButton = document.querySelector(".main-button");
+        var listItemTemplate = (text, translateValue) => {
+            var uppers = ['Bool', 'True', 'False']
+            if(uppers.includes(text)) {
+                text = text.toUpperCase()
+            }
+            return `
+                <li class="dropdown-list-item">
+                  <button class="dropdown-button list-button" data-translate-value="${translateValue}%">
+                    <span class="text-truncate">${text}</span>
+                  </button>
+                </li>
+          `;
+        };
+
+        var renderListItems = () => {
+          dropDownList.innerHTML += listItems
+            .map((item, index) => {
+              return listItemTemplate(item, 100 * index);
+            })
+            .join("");
+        };
+
+        renderListItems();
+    }
+
+    function toggleDropDown(dropDownList, arrow, wrapper, container, parameters) {
+            dropDownList.style.height = parameters[0];
+            dropDownList.style.opacity = parameters[1];
+            arrow.style.rotate = parameters[2];
+            wrapper.style['max-height'] = parameters[3];
+            wrapper.style.padding = parameters[4];
+            wrapper.style.border = parameters[5];
+            container.style.height = parameters[6];
+            var root = document. querySelector(':root');
+            root.style.setProperty('--list-opacity', parameters[7])
+    }
+    // End of GUI interaction elements
+
+    // node is the html element, key is the column name, menu is the list of dropdown options
+    function createDropDown(key, menu) {
+        var ddTemplate = document.getElementsByClassName('dropdown-template')[0];
+        var clonedDd = document.createElement('div');
+        clonedDd.setAttribute('class', 'dropdown-container');
+        clonedDd.innerHTML = `
+          <button class="dropdown-button main-button">
+            <span class="dropdown-title text-truncate"></span>
+            <span class="dropdown-arrow">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z" />
+              </svg>
+            </span>
+          </button>
+          <div class="dropdown-list-container">
+            <div class="dropdown-list-wrapper">
+              <ul class="dropdown-list"></ul>
+            </div>
+          </div>
+        `;
+        var container = clonedDd.querySelector('.dropdown-list-container');
+        var listWrapperSizes = 3.5; // margins, paddings & borders
+        // each list item is 2rem
+        var dropDownOpenHeight = 2 * menu.length + listWrapperSizes;
+        container.style.height = dropDownOpenHeight;
+        var mainButton = clonedDd.querySelector('.main-button')
+        var dropDownUl = clonedDd.querySelector('.dropdown-list');
+        var title = clonedDd.querySelector('.dropdown-title');
+        var arrow = clonedDd.querySelector('.dropdown-arrow')
+        var wrapper = clonedDd.querySelector('.dropdown-list-wrapper')
+        // Sets the menu text to the column name
+        title.innerHTML = key.toUpperCase();
+        populateDropDown(dropDownUl, title, menu, arrow, wrapper)
+        mainButton.addEventListener("click", () => {
+            // closes the dropdown if it is open
+          if(dropDownUl.style.opacity === '1') {
+                var parameters = ['0', '0', '0deg', '0', '0', '0', '0', 0]
+                toggleDropDown(dropDownUl, arrow, wrapper, container, parameters)
+          } else {
+              // opens the dropdown
+              var listWrapperSizes = 3.5; // margins, paddings & borders
+              var dropDownOpenHeight = 2 * menu.length + listWrapperSizes;
+              var parameters = [dropDownOpenHeight + 'rem', '1', '180deg', dropDownOpenHeight + 'rem', '1rem', '0.1rem solid var(--border-color)', dropDownOpenHeight + 'rem', 1]
+              toggleDropDown(dropDownUl, arrow, wrapper, container, parameters)
+        }
+        });
+        var buttons = dropDownUl.getElementsByClassName('dropdown-button');
+        Object.values(buttons).forEach(button => {
+            // closes the dropdown and updates the value in the GUI to the clicked
+            // item
+            button.addEventListener("click", (e) => {
+              var clickedItemText = e.target.innerText.trim();
+              title.innerHTML = clickedItemText;
+              var parameters = ['0', '0', '0deg', '0', '0', '0', '0', 0]
+              toggleDropDown(dropDownUl, arrow, wrapper, container, parameters)
+        });
+        });
+        // initializes the dropdown to be closed
+        var parameters = ['0', '0', '0deg', '0', '0', '0', '0', 0]
+        toggleDropDown(dropDownUl, arrow, wrapper, container, parameters)
+        return clonedDd;
+    }
+
+    function createNewDiag(row) {
+
+    }
+
+    function addHr(index, len) {
+        if(index < len) {
+            var hr = document.createElement('hr');
+            hr.setAttribute('class', 'diag-hr');
+            return hr;
+        }
+        return null;
+    }
+
+    function addToSpreadSheet(node) {
+            // Clears the spreadsheet container and adds the gui node to it
+            spreadSheet = document.getElementById('spreadsheet');
+            spreadSheet.innerHTML = '';
+            spreadSheet.style['overflow-y'] = 'auto';
+            spreadSheet.appendChild(node);
+            // initializes the spreadsheet node to the top of the scroll area
+            spreadSheet.scrollTo(0,0);
+    }
+
+    function isEven(number) {
+      return number % 2 === 0;
+    }
+
+    function changeButtons(addBtns=true, allBtns=false, colBtns=false) {
+        // Removes spreadsheet buttons
+        var buttons = document.querySelector('.buttons');
+        var buttonEach = document.getElementsByClassName('under-table-button');
+        buttons.style.display = 'none';
+        Object.values(buttonEach).forEach(button => {
+            button.style.display = 'none';
+        });
+        if(addBtns) {
+            buttons.style.display = 'block';
+            var addButtons = ['#okBtn', '#cancelBtn', '#uploadBtn', '#downloadBtn'];
+            addButtons.forEach(btn => {
+                var newBtn = document.querySelector(btn);
+                newBtn.style.display = 'inline-block';
+            });
+        }
+        if(allBtns) {
+          buttons.style.display = 'block';
+            var allButtons = ['#deleteCol', '#deleteRowBtn', '#addColBtn', '#addRowBtn'];
+            allButtons.forEach(btn => {
+                var newBtn = document.querySelector(btn);
+                newBtn.style.display = 'inline-block';
+            });
+        }
+        if(colBtns) {
+            buttons.style.display = 'block';
+            var colButtons = ['#deleteCol', '#addColBtn'];
+            colButtons.forEach(btn => {
+                var newBtn = document.querySelector(btn);
+                newBtn.style.display = 'inline-block';
+            });
+        }
+    }
+
+    function diagConfigGui(row, columns, tooltips) {
+        var diagConfig = document.createElement('div');
+        var mainDiag = document.createElement('div');
+        const title = document.createElement('div');
+        setToolTip(row.Event, title, tooltips, tableName='Event Config');
+        // blue gradient
+        mainDiag.style.background = 'linear-gradient(to right bottom, #075485,#b6e1fb)';
+        title.innerHTML = row.Event + ' Configuration';
+        title.setAttribute('class', `diag-config-row diag-config-title`);
+        var hrTitle = document.createElement('hr');
+        hrTitle.setAttribute('class', 'diag-hr diag-hr-title');
+        title.appendChild(hrTitle);
+        diagConfig.appendChild(title);
+        diagConfig.setAttribute('class', `diag-config`);
+        // lists that store the column names to determine which gui element to use
+        var dropdowns = {
+            'Activation Condition': ['>=', '<=', 'BOOL'],
+            'Persistent': ['TRUE', 'FALSE'],
+            'Logging Enable': ['TRUE', 'FALSE'],
+            'Event Enable': ['TRUE', 'FALSE'],
+            'FreezeFrameType': ['Battery', 'Contactor', 'Fet', 'Proccessor', 'Custom']
+        };
+        // list for toggles
+        var toggles = ['Discharge', 'Charge', 'Regen', 'Unlimited Time', 'Full Power'];
+        // list for static text
+        var staticText = ['Sl.No', 'Event ID', 'DTC TroubleCode'];
+        columns.forEach((col, index) => {
+            var line = document.createElement('div');
+            line.setAttribute('class', `diag-config-row`);
+            if(isEven(index)) {
+                // green gradient 1
+                line.style.background = 'linear-gradient(to right bottom, #fff, #7cc242)';
+            } else {
+                // green gradient 2
+                line.style.background = 'linear-gradient(to right bottom, #7cc242, #fff)';
+            }
+            var label = document.createElement('span');
+            setToolTip(col.field, label, tooltips, tableName='Event Config');
+            label.setAttribute('class', `diag-config-label`);
+            var configEntry = document.createElement('span');
+            configEntry.setAttribute('class', `diag-config-item`);
+            label.textContent = col.field;
+            // updates this row label text to be more specfic
+            if(col.field==="Unimited Time") {
+                label.textContent = "Unlimited Discharge Time";
+            }
+            // Adds the appropriate GUI tool for the cell by searching the lists
+            if(Object.keys(dropdowns).includes(col.field)) {
+                var dropDownEl = createDropDown(row[col.field], dropdowns[col.field]);
+                configEntry.appendChild(dropDownEl);
+            }
+            else if(toggles.includes(col.field)) {
+                createToggle(configEntry);
+            }
+            else if(staticText.includes(col.field)) {
+                createStaticText(configEntry, row[col.field]);
+            }
+            else {
+                createTextEntry(configEntry, row[col.field]);
+            }
+            line.appendChild(label);
+            line.appendChild(configEntry);
+            // amount of rows
+            var len = columns.length -1;
+            var hr =  addHr(index, len);
+            // animstart determines when to begin the hr animation
+            var animStart = index / 7 + 's';
+            if(hr) {
+                hr.style.setProperty('--start-anim', animStart);
+            }
+            diagConfig.appendChild(line);
+            if(hr) {
+                diagConfig.appendChild(hr);
+            }
+            mainDiag.appendChild(diagConfig);
+            addToSpreadSheet(mainDiag);
+        });
+        // Removes spreadsheet buttons
+        changeButtons(addBtns=true, allBtns=false);
+        addBasicImage('Event Config', tooltips);
+    }
+
+    function createDiagGui(sheetItems, sheetNames, tooltips) {
+        idx = getKeyByValue(sheetItems, 'Event Config');
+        var diagGui = document.createElement('ul');
+        const title = document.createElement('div');
+        title.innerHTML = 'Diagnostic Events';
+        title.style['text-align'] = 'center';
+        title.style['margin-top'] = '1vw';
+        title.style['font-weight'] = 700;
+        diagGui.appendChild(title);
+        diagGui.setAttribute('class', `diag-gui`);
+        i = 1;
+        // slices the first row to remove column names
+        param_table[idx]['Event Config'].slice(1).forEach(row => {
+            // Adds a list item for each event
+            const rowContainer = document.createElement('div');
+            const label = document.createElement('span');
+            const li = document.createElement('li');
+            const button = document.createElement('button');
+            // Label that shows and index and event ID
+            label.innerHTML = i + ': Event ID #' + row['Event ID'];
+            setToolTip('Event ID', label, tooltips, tableName='Event Config');
+            // Displays the event name
+            button.textContent = row.Event;
+            setToolTip(row.Event, button, tooltips, tableName='Event Config')
+            button.setAttribute('id', `diag-gui-item-${row['Sl.No']}`);
+            button.setAttribute('class', `diag-gui-item-button`);
+            rowContainer.setAttribute('class', `diag-gui-row`);
+            label.setAttribute('class', `diag-gui-label`);
+            var noSpaceStr = row.Event.replace(/\s+/g, '');
+            li.setAttribute('id', noSpaceStr);
+            li.setAttribute('class', `diag-gui-item`);
+            button.onclick = function(event) {
+                event.preventDefault(); // Prevent the form from submitting the traditional way
+                diagConfigGui(row, param_table[idx]['Event Config'][0], tooltips);
+            };
+            li.appendChild(button);
+            rowContainer.appendChild(label);
+            rowContainer.appendChild(li);
+            diagGui.appendChild(rowContainer);
+            addToSpreadSheet(diagGui);
+            // lastRow is used below for new entries
+            lastRow = row;
+            i += 1;
+        });
+        // Adds a list item for new diag event
+        const rowContainer = document.createElement('div');
+        const label = document.createElement('span');
+        const li = document.createElement('li');
+        const button = document.createElement('button');
+        nextRow = lastRow['Event ID'].slice(0,-2) + i;
+        label.innerHTML = i + ': Event ID #' + nextRow;
+        button.textContent = 'NEW EVENT';
+        button.setAttribute('class', `diag-gui-item-button`);
+        li.setAttribute('id', 'new-event');
+        li.setAttribute('class', `diag-gui-item`);
+        rowContainer.setAttribute('class', `diag-gui-row`);
+        label.setAttribute('class', `diag-gui-label`);
+        button.onclick = function(event) {
+            event.preventDefault(); // Prevent the form from submitting the traditional way
+            createNewDiag(lastRow, tooltips);
+        };
+        li.appendChild(button);
+        rowContainer.appendChild(label);
+        rowContainer.appendChild(li);
+        diagGui.appendChild(rowContainer);
+        addToSpreadSheet(diagGui);
+        // Removes spreadsheet buttons
+        changeButtons(addBtns=false, allBtns=false);
+        addBasicImage('Event Config');
+    }
+
+    function batteryConfigGui(rows, guiTitle, metrics, tooltips) {
+        var bcConfig = document.createElement('div');
+        var mainBc = document.createElement('div');
+        const title = document.createElement('div');
+        var hrTitle = document.createElement('hr');
+        setToolTip(guiTitle, title, tooltips);
+        // blue gradient
+        mainBc.style.background = 'linear-gradient(to right bottom, #075485,#b6e1fb)';
+        title.innerHTML = guiTitle;
+        title.setAttribute('class', `bc-config-row bc-title`);
+        hrTitle.setAttribute('class', 'bc-hr bc-hr-title');
+        bcConfig.setAttribute('class', `bc-config`);
+        mainBc.setAttribute('class', 'bc-main');
+        title.appendChild(hrTitle);
+        mainBc.appendChild(title);
+        // list of the GUI elements that need to be static text
+        var staticText = [`${guiTitle} Voltage V`, `${guiTitle} Capacity Ah`, `${guiTitle} Power Wh`];
+        // adds the voltage, current, power caculations to the rows
+        rows = rows.concat(metrics);
+        rows.forEach((rowDict, index) => {
+            var row = Object.values(rowDict);
+            var line = document.createElement('div');
+            var label = document.createElement('span');
+            var configEntry = document.createElement('span');
+            console.log(row)
+            console.log(row[0])
+            setToolTip(row[0], label, tooltips, tableName='Battery Config')
+            line.setAttribute('class', `bc-config-row`);
+            label.setAttribute('class', `bc-config-label`);
+            configEntry.setAttribute('class', `bc-config-item`);
+            if(isEven(index)) {
+                // green gradient 1
+                line.style.background = 'linear-gradient(to right bottom, #fff, #7cc242)';
+            } else {
+                // green gradient 2
+                line.style.background = 'linear-gradient(to right bottom, #7cc242, #fff)';
+            }
+            label.textContent = row[0];
+            // Adds the appropriate GUI tool for the cell
+            if(staticText.includes(row[0])) {
+                createStaticText(configEntry, row[1]);
+            }
+            else {
+                createTextEntry(configEntry, row[1]);
+            }
+            // creates dividing line, len prevents the final line from being created
+            var len = rows.length -1;
+            var hr =  addHr(index, len);
+            // controls when teh line begins moving
+            var animStart = index / 9 + 's';
+            if(hr) {
+                hr.style.setProperty('--start-anim', animStart);
+            }
+            line.appendChild(label);
+            line.appendChild(configEntry);
+            bcConfig.appendChild(line);
+            if(hr) {
+                bcConfig.appendChild(hr);
+            }
+            mainBc.appendChild(bcConfig);
+        });
+        // removes spreadsheet buttons
+        changeButtons(addBtns=true, allBtns=false);
+        addBasicImage('Battery Config', tooltips);
+        return mainBc;
+    }
+
+    function addBatteryConfig(modules, packs) {
+        var batteryConfig = document.createElement('div');
+        batteryConfig.setAttribute('class', 'bc-section');
+        batteryConfig.appendChild(modules);
+        batteryConfig.appendChild(packs);
+        addToSpreadSheet(batteryConfig);
+    }
+
+    // section is section name, values are the number of units of each type
+    function createCompoundMetrics(values, section, manufacturerMetrics, inputMetrics=null) {
+        manufacturerMetrics.forEach(item => {
+            if(item.Parameter === 'Nominal Voltage') {
+                cellVoltage = item.Value;
+            }
+            else if(item.Parameter === 'Cell Capacity') {
+                cellCapacity = item.Value;
+            }
+        });
+        var metrics = {}
+        // inputMetrics is not null if the power and current for each unit
+        // is dependent upon a prior unit and not the spreadsheet data
+        if(inputMetrics) {
+            var numberCellsSeries = values[0].Value;
+            var numberCellsParallel = values[1].Value;
+            metrics['power'] = inputMetrics['power'] * numberCellsSeries;
+            metrics['current'] = inputMetrics['current'] * numberCellsParallel;
+        } else {
+            var numberCellsSeries = values[0].Value;
+            var numberCellsParallel = values[1].Value;
+            metrics['power'] = cellVoltage * numberCellsSeries;
+            metrics['current'] = cellCapacity * numberCellsParallel;
+        }
+        return metrics
+    }
+
+    function createBatteryConfigRows(metrics, section) {
+        // Formats the battery metrics to a "label": "value" dictionary
+        // Rounded to 2 decimal places (toFixed)
+        var result =
+        [
+        {[`${section} Voltage `]: [`${section} Voltage V`][0], 'Value': parseFloat(metrics.power).toFixed(2)},
+        {[`${section} Capacity`]: [`${section} Capacity Ah`][0], 'Value': parseFloat(metrics.current).toFixed(2)},
+        {[`${section} Power`]: [`${section} Power Wh`][0], 'Value': parseFloat(metrics.power * metrics.current).toFixed(2)}
+        ];
+        return result
+    }
+
+    function createSheetMenu(sheetItems, sheetNames, tooltips) {
+        if(Object.values(sheetItems).includes('Event Config')) {
+            createDiagGui(sheetItems, sheetNames, tooltips);
+        } else if(Object.values(sheetItems).includes('Battery Config')) {
+            var manufacturerMetrics = param_table['1'][sheetItems['1']]
+            // Create module section, slice the rows
+            var moduleValues = param_table['0'][sheetItems['0']].slice(1,4);
+            var moduleCompoundMetrics = createCompoundMetrics(moduleValues, 'Module', manufacturerMetrics, null);
+            var moduleRows = createBatteryConfigRows(moduleCompoundMetrics, "Module");
+            // Creates the GUI for this section
+            var modules = batteryConfigGui(moduleValues, 'Module', moduleRows, tooltips);
+            // Create pack section, slice the rows
+            var packValues = param_table['0'][sheetItems['0']].slice(4,6);
+            var packCompoundMetrics = createCompoundMetrics(packValues, 'Pack', manufacturerMetrics, moduleCompoundMetrics);
+            var packRows = createBatteryConfigRows(packCompoundMetrics, "Pack");
+            // Creates the GUI for this section
+            var packs = batteryConfigGui(packValues, 'Pack', packRows, tooltips);
+            // Add both sections to main element
+            addBatteryConfig(modules, packs);
+        } else {
+            var sheetBar = document.getElementById('sheet-bar');
+            // Itertes through array of sheet names to preserve order
+            sheetNames['0'].forEach(key => {
+                // Gets sheet item to access param_table index
+                if (Object.values(sheetItems).includes(key.title)) {
+                    // Adds a sheet item
+                    const li = document.createElement('li');
+                    li.textContent = key.title;
+                    // removes spaces in the string for CSS class syntax
+                    var noSpaceStr = key.title.replace(/\s+/g, '');
+                    li.setAttribute('class', `sheet-item tab ` + noSpaceStr + "MenuBtn");
+                    li.setAttribute('id', noSpaceStr + 'MenuBtn');
+                    li.addEventListener('click', () => {
+                        event.preventDefault(); // Prevent the form from submitting the traditional way
+                        if(key.title === 'Manufacturer Spec') {
+                            changeButtons(addBtns=true, allBtns=false)
+                        } else if(key.title === 'SOA') {
+                            changeButtons(addBtns=true, allBtns=false, colBtns=true)
+                        } else {
+                            changeButtons(addBtns=true, allBtns=true)
+                        }
+                        tabsBox.querySelector('.active').classList.remove('active')
+                        li.classList.add('active')
+                        dataTable.destroy(); // Clears previous table
+                        idx = getKeyByValue(sheetItems, key.title)
+                        buildTable(key.title, idx, tooltips).then(table => {
+                            //Declare global table variable
+                            dataTable = table;
+                        });
+                    });
+                    //Adds buttons to tabs on top of tabl
+                    sheetBar.appendChild(li);
+                }
+            });
+            // Highlights the sheet item button for the first sheet item
+            var sheetName = '#' + sheetItems[0].replace(/\s+/g, '') + 'MenuBtn';
+            var firstSheet = document.querySelector(sheetName);
+            firstSheet.classList.add('active')
+            // Creates teh default table when teh page is first loaded
+            buildTable(sheetItems[0], 0, tooltips).then(table => {
+                dataTable = table;
+            });
+        }
+    }
+
+    function setSpreadSheetHeight() {
+        var spreadSheetDiv = document.querySelector('#spreadsheet'),
+        spreadContDiv = document.querySelector('.spread-container'),
+        sheetBarDiv = document.querySelector('#sheet-bar');
+
+        sheetBarHeight = sheetBarDiv.offsetHeight;
+        spreadContHeight = spreadContDiv.offsetHeight;
+        spreadSheetHeight = spreadContHeight - sheetBarHeight;
+
+        spreadSheetDiv.style.height = spreadSheetHeight + 'px';
+    }
+
+    sheetItems = param_table.reduce((acc, currentObj, index) => {
+      var key = Object.keys(currentObj)[0]; // Get the first (and only) property name of the object
+      acc[index] = key; // Set the index as the key and the property name as the value in the accumulator object
+      return acc; // Return the updated accumulator for the next iteration
+    }, {}); // Initial value of the accumulator is an empty object…
+    var sheetNamesUrl = {'name': 'sheetNames', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/sheet_names'};
+    fetchAndProcessCsv(sheetNamesUrl, username, profile).then(results => {
+        var sheetNames = results[sheetNamesUrl.name];
+
+        // Creates the tooltips div and adds tooltips mouseenter functinality
+        loadTooltips().then(tooltips => {
+            tooltips = tooltips;
+            createSheetMenu(sheetItems, sheetNames, tooltips);
+            setSpreadSheetHeight()
+            var buttonsToolTips = ["uploadBtn", "downloadBtn", "addRowBtn", "deleteRowBtn", "addColBtn", "deleteCol", "okBtn", "cancelBtn"];
+            Object.keys(sheetItems).forEach(key => {
+                buttonsToolTips.push(sheetItems[key].replace(/\s+/g, '') + 'MenuBtn');
+            });
+            leftMenuItems.forEach(item => {
+                buttonsToolTips.push(item.name.replace(/\s+/g, ''));
+            });
+            buttonsToolTips.forEach(item => {
+                var tag = document.getElementById(item);
+                var toolTipDiv = document.getElementsByClassName('tool-tip')[0];
+                if(tag != undefined) {
+                    tag.addEventListener('mouseenter', function() {
+                        toolTipDiv.innerHTML = ''; // Clear the tooltip text
+                        toolTipDiv.innerHTML = tooltips[item]; // Set the tooltip text
+                    });
+                }
+            });
+        });
+    });
+
+    async function loadTooltips() {
+        const url = "{{ url_for('static', filename='tooltips.json') }}";
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error("Could not load tooltips: ", error);
+        }
+    }
+
+    //add row to bottom of table on button click
+    document.getElementById("addRowBtn").addEventListener("click", function(event){
+        event.preventDefault(); // Prevent the form from submitting the traditional way
+        dataTable.addData([{}], false);
+    });
+    document.getElementById("deleteRowBtn").addEventListener("click", function(event){
+        event.preventDefault(); // Prevent the form from submitting the traditional way
+        var selectedData = dataTable.getRanges();
+        var selectedRows = dataTable.getRows("selected");
+        // Assuming 'array' is the provided array of Proxy objects
+        if (selectedData.length > 0) {
+            // Extract the first element (Proxy object) from the array
+            let firstProxy = selectedData[0];
+
+            // Assuming the Proxy handler is correctly set up to allow property access
+            // Extract the '_range' object from the target of the Proxy
+            let range = firstProxy._range;
+
+            // Extract the start and end row numbers from the '_range' object
+            let startRow = range.start.row;
+            let endRow = range.end.row;
+
+            // Iterate through the range from startRow to endRow
+            for (let row = endRow; row >= startRow; row--) {
+                var theRow = dataTable.rowManager.rows[row];
+                theRow.delete();
+            }
+        } else {
+            console.log("Array is empty or not properly structured.");
+        }
+    });
+    document.getElementById("colBtn").addEventListener("click", function(event){
+        event.preventDefault(); // Prevent the form from submitting the traditional way
+        var new_field = document.getElementById("newColumn").value;
+        var newColumnDefinition = {
+            title: new_field, // Title of the column
+            field: new_field, // The field in the data that this column will display
+        };
+        dataTable.addColumn(newColumnDefinition, false);
+    });
+    document.getElementById("okBtn").addEventListener("click", function(event){
+        event.preventDefault(); // Prevent the form from submitting the traditional way
+        url = 'https://shorecode2.pythonanywhere.com/save';
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({'profile': profile, 'username': username, 'param_table': param_table})
+        })
+    .then(response => {
+        response.text().then(resp => { // Wait for the text() promise to resolve
+            if (resp === 'OK') {
+                console.log('success');
+                dataTable.alert("Data saved successfully");
+            } else if (resp === 'FAIL') { // Changed to else if for efficiency
+                dataTable.alert("Failed to save");
+            }
+        });
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        table.alert("Error processing request");
+    });
+    });
+    document.getElementById("downloadBtn").addEventListener("click", function(event){
+        event.preventDefault(); // Prevent the form from submitting the traditional way
+        var url = 'https://shorecode2.pythonanywhere.com/download';
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+          body: JSON.stringify({'profile': profile, 'username': username})
+      }).then(response => response.blob())
+      .then(blob => {
+        // Create a new URL for the blob
+        const url = window.URL.createObjectURL(blob);
+        // Create a new anchor element
+        const a = document.createElement('a');
+        a.href = url;
+        // Set the download attribute to the name of the file
+        a.download = 'Calibrations.xlsx';
+        // Append the anchor to the document
+        document.body.appendChild(a);
+        // Trigger the download
+        a.click();
+        // Clean up by removing the anchor and revoking the object URL
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      })
+      .catch(error => console.error('Error fetching the file:', error));
+    });
+    window.addEventListener('click', function(event){
+        closePopup();
+    });
+    function closePopup(){
+          dataTable.clearAlert();
+    }
+    document.getElementById('deleteCol').addEventListener('click', function() {
+    event.preventDefault(); // Prevent the form from submitting the traditional way
+    // Delete the 'age' column from the table
+        var selectedCols = dataTable.getColumns("selected");
+        var selectedData = dataTable.getRanges();
+       // dataTable.deleteColumn('age');
+        if (selectedData.length > 0) {
+            // Extract the first element (Proxy object) from the array
+            let firstProxy = selectedData[0];
+
+            // Assuming the Proxy handler is correctly set up to allow property access
+            // Extract the '_range' object from the target of the Proxy
+            let range = firstProxy._range;
+
+            // Extract the start and end row numbers from the '_range' object
+            let startCol = range.start.col;
+            let endCol = range.end.col;
+
+            // Iterate through the range from startRow to endRow
+            for (let col = endCol; col >= startCol; col--) {
+                var theCol = dataTable.columnManager.columns[col];
+                theCol.delete();
+            }
+        } else {
+            console.log("Array is empty or not properly structured.");
+        }
+    });
+
+/*
+
+    cancelBtn.onclick = function() {
+        GET tables
+    }
+
+*/
+
+    async function fetchAndProcessCsv(url, username, profile) {
+        try {
+            console.log('fetching ' + url['name'])
+            const response = await fetch(url.url, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({"username": username, "profile": profile})
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const text = await response.text();
+            const data = parseCSVString(text);
+          	data_dict = {[url.name]: data};
+            return data_dict;
+        } catch (error) {
+            console.error('Error fetching or processing CSV:', error);
+        }
+    }
+
+    // Function to convert each array of values into a dictionary using the predefined keys
+    function arraysToDicts(data, keys) {
+        return data.map(values => {
+            let dict = {};
+            values.forEach((value, index) => {
+                // Use the key from dictKeys if available, otherwise use the index as the key
+                let key = keys[index] || index;
+                dict[key] = value;
+            });
+            return dict;
+        });
+    }
+    // Function to convert each line into a list of dictionaries
+    function linesToListOfDicts(lines) {
+        // Create a list of dictionaries for this line
+        return lines.map((value, index) => {
+            return {
+                title: value, // Use the corresponding key as the title
+                field: value        // Use the value from the line
+            };
+        });
+    }
+
+    function parseCSVString(csvString) {
+        const lines = csvString.trim().split('\n');
+        var headers = lines[0].replace('\r','').split(',');
+        var data = lines.slice(1).map(line => line.replace('\r','').split(','));
+        data = arraysToDicts(data, headers)
+        headers = linesToListOfDicts(headers)
+        headers = [headers]
+        headers = headers.concat(data);
+        return headers; // Returns an object containing headers and data
+    }
+
+    // Transform the menuItems array into the desired format
+    var menuItems = profiles.map((profile, index) => ({
+      id: index,
+      name: profile
+    }));
+
+    var menuBar = document.getElementById('menu-bar');
+
+    menuItems.forEach(item => {
+        // Function to populate the profile menu
+        // Adds a list item for each profile
+        const li = document.createElement('li');
+        const button = document.createElement('button'); // Using button instead of 'a'
+        button.textContent = item.name;
+        button.setAttribute('id', `menu-item-${item.id}`);
+        button.setAttribute('class', `menu-item-button`);
+        li.setAttribute('class', `menu-item`);
+        button.onclick = function(event) {
+            event.preventDefault(); // Prevent the form from submitting the traditional way
+            document.querySelector('.loading').style.display = 'block'; // Show the loading animation
+            var csv_data = [];
+            const csvUrls = [
+                {'name': 'Manufacturer Spec', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Manufacturer Spec'},
+                {'name': 'Chg(10Sec)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Chg(10Sec)'},
+                {'name': 'Chg(Cont)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Chg(Cont)'},
+                {'name': 'Chg(Inst)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Chg(Inst)'},
+                {'name': 'Dch(10Sec)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Dch(10Sec)'},
+                {'name': 'Dch(Cont)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Dch(Cont)'},
+                {'name': 'Depolar Time', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Depolar Time'},
+                {'name': 'Hysteresis', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Hysteresis'},
+                {'name': 'OCV', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/OCV'},
+                {'name': 'Res(10Sec)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Res(10Sec)'},
+                {'name': 'Res(Cont)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Res(Cont)'},
+                {'name': 'Res(Inst)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Res(Inst)'},
+                {'name': 'SOA', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/SOA'}
+            ];
+          const makeTableUrl = "https://shorecode2.pythonanywhere.com/make-tables";
+            fetch(makeTableUrl, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({"profile": profile, "username": username})
+            }).then(tableMade => {
+                Promise.all(csvUrls.map(url => fetchAndProcessCsv(url, username, profile)))
+                     .then(results => {
+                        // All fetch operations are complete, and 'results' contains all the csv_data
+                        csv_data = results;
+                        var page = "https://shorecode2.pythonanywhere.com/batterywiz";
+                        fetch(page, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({'profile': item.name, 'username': username, 'param_table': csv_data})
+                        })
+                        .then(response => response.text())
+                        .then(data => {
+                            document.open();
+                            document.write(data); // Replace the current document with the new HTML
+                            document.close();
+                        })
+                        .catch((error) => {
+                            console.error('Error:', error);
+                        });
+                     });
+
+            });
+        };
+        li.appendChild(button);
+        menuBar.appendChild(li);
+    });
+
+    var leftMenuItems = [
+        {'id': '0', 'name': 'Cell Parameters',
+            'csvUrls': [
+                {'name': 'Manufacturer Spec', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Manufacturer Spec'},
+                {'name': 'Chg(10Sec)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Chg(10Sec)'},
+                {'name': 'Chg(Cont)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Chg(Cont)'},
+                {'name': 'Chg(Inst)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Chg(Inst)'},
+                {'name': 'Dch(10Sec)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Dch(10Sec)'},
+                {'name': 'Dch(Cont)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Dch(Cont)'},
+                {'name': 'Depolar Time', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Depolar Time'},
+                {'name': 'Hysteresis', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Hysteresis'},
+                {'name': 'OCV', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/OCV'},
+                {'name': 'Res(10Sec)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Res(10Sec)'},
+                {'name': 'Res(Cont)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Res(Cont)'},
+                {'name': 'Res(Inst)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Res(Inst)'},
+                {'name': 'SOA', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/SOA'}
+            ]
+        },
+        {'id': '1', 'name': 'Battery Config',
+            'csvUrls': [
+                {'name': 'Battery Config', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Battery Config'},
+                {'name': 'Manufacturer Spec', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Manufacturer Spec'}
+            ]
+        },
+        {'id': '2', 'name': 'System Config',
+            'csvUrls': [
+                {'name': 'Switches', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Switches'},
+                {'name': 'Precharge', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Precharge'},
+                {'name': 'Current Sense', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Current Sense'}
+            ]
+        },
+        {'id': '3', 'name': 'Diagnostics',
+            'csvUrls': [
+                 {'name': 'Event Config', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Event Config'},
+            ]
+        },
+        {'id': '4', 'name': 'Algorithm Config',
+            'csvUrls': [
+                {'name': 'Limits', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Limits'},
+                {'name': 'Balance', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Balance'},
+                {'name': 'Charge', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Charge'}
+            ]
+        },
+        {'id': '5', 'name': 'Resource Req',
+            'csvUrls': [
+            ]
+        },
+    ];
+
+    var leftMenu = document.getElementsByClassName('left-menu')[0];
+
+    leftMenuItems.forEach(item => {
+        // Function to populate the sections menu
+        // Adds a list item for each section
+        const li = document.createElement('li');
+        const button = document.createElement('button'); // Using button instead of 'a'
+        button.textContent = item.name;
+        button.setAttribute('id', `left-menu-item-${item.id}`);
+        button.setAttribute('class', `left-menu-item-button`);
+        var noSpaceStr = item.name.replace(/\s+/g, '');
+        li.setAttribute('id', noSpaceStr);
+        li.setAttribute('class', `left-menu-item`);
+        button.onclick = function(event) {
+            event.preventDefault(); // Prevent the form from submitting the traditional way
+            document.querySelector('.loading').style.display = 'block'; // Show the loading animation
+            var csv_data = [];
+            Promise.all(item.csvUrls.map(csvUrl => fetchAndProcessCsv(csvUrl, username, profile)))
+                .then(results => {
+              // All fetch operations are complete, and 'results' contains all the csv_data
+                csv_data = results;
+            var page = "https://shorecode2.pythonanywhere.com/batterywiz";
+            fetch(page, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({'profile': profile, 'username': username, 'param_table': csv_data})
+            })
+            .then(response => response.text())
+            .then(data => {
+                document.open();
+                document.write(data); // Replace the current document with the new HTML
+                document.close();
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        });
+        };
+        li.appendChild(button);
+        leftMenu.appendChild(li);
+    });
+
+    // Function for the right scroll button on the profile menu
+    function scrollRight() {
+        document.querySelector('.menu-wrapper').scrollBy({ left: 100, behavior: 'smooth' });
+    }
+    // Function for the left scroll button on the profile menu
+    function goLeft() {
+        document.querySelector('.menu-wrapper').scrollBy({ left: -100, behavior: 'smooth' });
+    }
+
+    // Get ok, cancel buttons
+    var okBtn = document.getElementById("okBtn");
+    var cancelBtn = document.getElementById("cancelBtn");
+
+    // Get modal element
+    var add = document.getElementById("add-modal");
+    var upload = document.getElementById("upload-modal");
+
+    // Get the button that opens the modal
+    var addColBtn = document.getElementById("addColBtn");
+    var uploadBtn = document.getElementById("uploadBtn");
+
+    // Get the <span> element that closes the modal
+    var closeAddSpan = document.getElementsByClassName("close-add")[0];
+    var closeUploadSpan = document.getElementsByClassName("close-upload")[0];
+
+        // When the user clicks the button, open the modal
+    uploadBtn.onclick = function() {
+        upload.style.display = "block";
+    };
+
+    addColBtn.onclick = function() {
+        add.style.display = "block";
+    };
+
+    closeUploadSpan.onclick = function() {
+        upload.style.display = "none";
+    };
+    closeAddSpan.onclick = function() {
+        add.style.display = "none";
+    };
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+        if (event.target == add) {
+            add.style.display = "none";
+        }
+    };
+    window.onclick = function(event) {
+        if (event.target == add) {
+            upload.style.display = "none";
+        }
+    };
+
+    // function to create new elements with a class (cleans up code)
+    function createDiv(className = "") {
+        const el = document.createElement("div")
+        el.classList.add(className)
+        return el
+    }
+    // function to add text nodes to elements
+    function addText(el, text) {
+        el.appendChild(document.createTextNode(text))
+    }
+
+    // Function for creating ChatGPT popup notification windows
+    function createNotis(
+        el,
+        title = "Untitled notification",
+        description = "",
+        duration = 2,
+        destroyOnClick = false,
+        clickFunction = undefined
+    ) {
+
+        // functions
+        function destroy(animate) {
+          if (animate) {
+            notiEl.classList.add("out")
+            notiEl.addEventListener("animationend", () => {notiEl.remove()})
+          } else {
+            notiEl.remove()
+          }
+        }
+
+        // create the elements and add their content
+        const notiEl = createDiv("noti")
+        const notiCardEl = createDiv("noticard")
+        const glowEl = createDiv("notiglow")
+        const borderEl = createDiv("notiborderglow")
+
+        const titleEl = createDiv("notititle")
+        addText(titleEl, title)
+
+        const descriptionEl = createDiv("notidesc")
+        addText(descriptionEl, description)
+
+        // append the elements to each other
+        notiEl.appendChild(notiCardEl)
+    //        notiCardEl.appendChild(glowEl)
+    //      notiCardEl.appendChild(borderEl)
+        notiCardEl.appendChild(titleEl)
+        notiCardEl.appendChild(descriptionEl)
+
+        el.appendChild(notiEl)
+
+        // transition the height of the container to the height of the visible card
+        requestAnimationFrame(function() {
+          notiEl.style.height = "calc(0.25rem + " + notiCardEl.getBoundingClientRect().height + "px)";
+        });
+
+        // hover animation
+        notiEl.addEventListener("mousemove", (event) => {
+          const rect = notiCardEl.getBoundingClientRect()
+          const localX = (event.clientX - rect.left) / rect.width
+          const localY = (event.clientY - rect.top) / rect.height
+
+          glowEl.style.left = localX * 100 + "%"
+          glowEl.style.top = localY * 100 + "%"
+
+          borderEl.style.left = localX * 100 + "%"
+          borderEl.style.top = localY * 100 + "%"
+        });
+
+        // onclick function if one is set
+        if (clickFunction != undefined) {
+          notiEl.addEventListener("click", clickFunction)
+        }
+
+        // destroy the notification on click if it is set to do so
+        if (destroyOnClick) {
+          notiEl.addEventListener("click", () => destroy(true))
+        }
+
+
+        // remove the notification after the set time if there is one
+        if (duration != 0) {
+          setTimeout(() => {
+            notiEl.classList.add("out")
+            notiEl.addEventListener("animationend", () => {notiEl.remove()})
+          }, duration * 750)
+        }
+        return notiEl
+  }
+
+    var el = document.querySelector('.chat-gpt-result');
+
+    var demonotis = [
+      // 80 is the amount of seconds the notice is displayed, true is destory on click
+      () => {createNotis(el, "ChatGPT demo", "wow, these notifications really do look beautiful. chatgpt answers will go here!", 80, true)},
+    ]
+
+    // function for ChatGPT help button
+    function handleHelpClick() {
+        var parent = document.querySelector(".cgpt-modal-parent"),
+            section = document.querySelector(".main");
+        parent.style.display = "block";
+        section.style.filter = "blur(5px)"
+        }
+    // X is the close window icon
+    X = document.querySelector(".x");
+    X.addEventListener("click", disappearX);
+    function disappearX() {
+        var parent = document.querySelector(".cgpt-modal-parent"),
+        section = document.querySelector(".main");
+        parent.style.display = "none";
+        section.style.filter = "blur(0px)"
+    }
+    var parent = document.querySelector(".cgpt-modal-parent")
+    parent.addEventListener("click", disappearParent)
+    function disappearParent(e) {
+        if (e.target.className == "modal-parent") {
+            var parent = document.querySelector(".cgpt-modal-parent"),
+            section = document.querySelector(".main");
+            parent.style.display = "none";
+            section.style.filter = "blur(0px)"
+        }
+    }
+
+    var i = 1;
+    demonotis[0]()
+        var tabsBox = document.querySelector('.tabs-box'),
+      arrowIcons = document.querySelectorAll('.icon i')
+
+    var isDragging = false
+
+    var handleIcons = scrollVal => {
+      var maxScrollableWidth = tabsBox.scrollWidth - tabsBox.clientWidth
+      arrowIcons[0].parentElement.style.display = scrollVal <= 0 ? 'none' : 'flex'
+      arrowIcons[1].parentElement.style.display =
+        maxScrollableWidth - scrollVal <= 1 ? 'none' : 'flex'
+    }
+
+    arrowIcons.forEach(icon => {
+      icon.addEventListener('click', () => {
+        // if clicked icon is left, reduce 350 from tabsBox scrollLeft else add
+        var scrollWidth = (tabsBox.scrollLeft += icon.id === 'left' ? -340 : 340)
+        handleIcons(scrollWidth)
+      })
+    })
+
+    var dragging = e => {
+      if (!isDragging) return
+      tabsBox.classList.add('dragging')
+      tabsBox.scrollLeft -= e.movementX
+      handleIcons(tabsBox.scrollLeft)
+    }
+
+    var dragStop = () => {
+      isDragging = false
+      tabsBox.classList.remove('dragging')
+    }
+
+    tabsBox.addEventListener('mousedown', () => (isDragging = true))
+    tabsBox.addEventListener('mousemove', dragging)
+    document.addEventListener('mouseup', dragStop)
+
+</script>
+
 </body>
 </html>
+

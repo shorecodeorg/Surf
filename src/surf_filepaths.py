@@ -13,7 +13,7 @@ from dataclasses import dataclass
 @dataclass
 class Files:
     current_platform = platform.system()
-    filepaths = ['logging/surf.log']
+    filepaths = ['logging/surf.log', 'data/images/sc.png']
     win_filepaths = list()
     for f in filepaths:
         f = f.replace('/', '\\')

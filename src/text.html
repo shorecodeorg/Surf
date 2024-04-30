@@ -1,7 +1,420 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="language" content="English">
+    <title>Battery Profile Selection</title>
+    <meta name="description" content="Ecoveta's Batterywiz tool will solve all your battery configuration problems">
+    <meta name="robots" content="index, follow">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+        }
+        #modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 400px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .button-group {
+            margin-top: 20px;
+            text-align: center;
+            align-items: center;
+        }
+        button {
+            width: 22%;
+            padding: 10px;
+            background-color: #99d6ff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #1aa3ff;
+        }
+        .menu {
+            width: 22%;
+            margin-top:5vw;
+            border: 1px solid #ccc;
+            padding: 5px;
+            padding-bottom: 15px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 5px;
+        }
+        option:checked {
+             border-color: blue;
+             background-color: #99d6ff;
+        }
+        option {
+            text-align: center;
+        }
+        #batteryProfiles {
+            width:100%;
+            background-color:#eee;
+            color:black;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1.5rem;
+        }
+        #batteryProfiles-selected {
+            background-color: #ccebff;
+        }
+        #profileBtn {
+            margin-left: 5%;
+            width:auto;
+        }
+        #newProfileName {
+            font-size:1.1rem;
+        }
+
+
+        /* Absolute Center Spinner */
+        .loading {
+          display: none;
+          position: fixed;
+          z-index: 999;
+          height: 2em;
+          width: 2em;
+          overflow: visible;
+          margin: auto;
+          top: -80%;
+          left: 0;
+          bottom: 0;
+          right: 0;
+        }
+
+        /* Transparent Overlay */
+        .loading:before {
+          content: '';
+          display: block;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0,0,0,0.3);
+        }
+
+        /* :not(:required) hides these rules from IE9 and below */
+        .loading:not(:required) {
+          /* hide "loading..." text */
+          font: 0/0 a;
+          color: transparent;
+          text-shadow: none;
+          background-color: transparent;
+          border: 0;
+        }
+
+        .loading:not(:required):after {
+          content: '';
+          display: block;
+          font-size: 10px;
+          width: 1em;
+          height: 1em;
+          margin-top: -0.5em;
+          -webkit-animation: spinner 1500ms infinite linear;
+          -moz-animation: spinner 1500ms infinite linear;
+          -ms-animation: spinner 1500ms infinite linear;
+          -o-animation: spinner 1500ms infinite linear;
+          animation: spinner 1500ms infinite linear;
+          border-radius: 0.5em;
+          -webkit-box-shadow: rgba(0, 0, 0, 0.75) 1.5em 0 0 0, rgba(0, 0, 0, 0.75) 1.1em 1.1em 0 0, rgba(0, 0, 0, 0.75) 0 1.5em 0 0, rgba(0, 0, 0, 0.75) -1.1em 1.1em 0 0, rgba(0, 0, 0, 0.5) -1.5em 0 0 0, rgba(0, 0, 0, 0.5) -1.1em -1.1em 0 0, rgba(0, 0, 0, 0.75) 0 -1.5em 0 0, rgba(0, 0, 0, 0.75) 1.1em -1.1em 0 0;
+          box-shadow: rgba(0, 0, 0, 0.75) 1.5em 0 0 0, rgba(0, 0, 0, 0.75) 1.1em 1.1em 0 0, rgba(0, 0, 0, 0.75) 0 1.5em 0 0, rgba(0, 0, 0, 0.75) -1.1em 1.1em 0 0, rgba(0, 0, 0, 0.75) -1.5em 0 0 0, rgba(0, 0, 0, 0.75) -1.1em -1.1em 0 0, rgba(0, 0, 0, 0.75) 0 -1.5em 0 0, rgba(0, 0, 0, 0.75) 1.1em -1.1em 0 0;
+        }
+
+        /* Animation */
+
+        @-webkit-keyframes spinner {
+          0% {
+            -webkit-transform: rotate(0deg);
+            -moz-transform: rotate(0deg);
+            -ms-transform: rotate(0deg);
+            -o-transform: rotate(0deg);
+            transform: rotate(0deg);
+          }
+          100% {
+            -webkit-transform: rotate(360deg);
+            -moz-transform: rotate(360deg);
+            -ms-transform: rotate(360deg);
+            -o-transform: rotate(360deg);
+            transform: rotate(360deg);
+          }
+        }
+        @-moz-keyframes spinner {
+          0% {
+            -webkit-transform: rotate(0deg);
+            -moz-transform: rotate(0deg);
+            -ms-transform: rotate(0deg);
+            -o-transform: rotate(0deg);
+            transform: rotate(0deg);
+          }
+          100% {
+            -webkit-transform: rotate(360deg);
+            -moz-transform: rotate(360deg);
+            -ms-transform: rotate(360deg);
+            -o-transform: rotate(360deg);
+            transform: rotate(360deg);
+          }
+        }
+        @-o-keyframes spinner {
+          0% {
+            -webkit-transform: rotate(0deg);
+            -moz-transform: rotate(0deg);
+            -ms-transform: rotate(0deg);
+            -o-transform: rotate(0deg);
+            transform: rotate(0deg);
+          }
+          100% {
+            -webkit-transform: rotate(360deg);
+            -moz-transform: rotate(360deg);
+            -ms-transform: rotate(360deg);
+            -o-transform: rotate(360deg);
+            transform: rotate(360deg);
+          }
+        }
+        @keyframes spinner {
+          0% {
+            -webkit-transform: rotate(0deg);
+            -moz-transform: rotate(0deg);
+            -ms-transform: rotate(0deg);
+            -o-transform: rotate(0deg);
+            transform: rotate(0deg);
+          }
+          100% {
+            -webkit-transform: rotate(360deg);
+            -moz-transform: rotate(360deg);
+            -ms-transform: rotate(360deg);
+            -o-transform: rotate(360deg);
+            transform: rotate(360deg);
+          }
+        }
+        .xlsx-input {
+            padding-bottom: 15px;
+        }
+        .fileInputLabel {
+            font-size: 0.75vw;
+        }
+    </style>
+</head>
 <body>
-<div>
-hello
+<div class="loading">Loading&#8230;</div>
+
+<div class="menu">
+    <select id="batteryProfiles" size="8" required>
+        {% for profile in profiles %}
+            <option value="{{ profile }}">{{ profile }}</option>
+        {% endfor %}
+
+    </select>
+    <div class="button-group">
+        <div class='xlsx-input'>
+            <label for="xlsxFileInput" class='fileInputLabel'>Import excel file:</label>
+            <input type="file" id="xlsxFileInput" multiple accept=".xlsx">
+        </div>
+        <button id="deleteBtn">Delete</button>
+        <button id="createBtn">Create</button>
+        <button id="okBtn">OK</button>
+        <button id="cancelBtn">Cancel</button>
+    </div>
 </div>
+
+<div id="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <p>Enter the name of the new battery profile:</p>
+        <input type="text" id="newProfileName">
+        <button id="profileBtn" onclick="createProfile()">Create Profile</button>
+    </div>
+</div>
+
+<script>
+    // Get modal element
+    var modal = document.getElementById("modal");
+
+    // Get the button that opens the modal
+    var createBtn = document.getElementById("createBtn");
+
+    // Get the <span> element that closes the modal
+    var closeSpan = document.getElementsByClassName("close")[0];
+
+    // When the user clicks the button, open the modal
+    createBtn.onclick = function() {
+        modal.style.display = "block";
+    };
+
+    // When the user clicks on <span> (x), close the modal
+    closeSpan.onclick = function() {
+        modal.style.display = "none";
+    };
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    };
+
+    function createProfile() {
+        var newName = document.getElementById("newProfileName").value;
+        if (newName.trim() !== "") {
+            var select = document.getElementById("batteryProfiles");
+            var option = document.createElement("option");
+            option.text = newName;
+            select.add(option);
+            modal.style.display = "none";
+        } else {
+            alert("Please enter a valid name.");
+        }
+    }
+   okBtn.onclick = function(event) {
+        document.querySelector('.loading').style.display = 'block'; // Show the loading animation
+        event.preventDefault(); // Prevent the form from submitting the traditional way
+        const username = "{{ username }}";
+        const profile = document.getElementById('batteryProfiles').value;
+
+        async function fetchAndProcessCsv(url, username, profile) {
+            try {
+                console.log('fetching ' + url['name']);
+                const response = await fetch(url.url, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({"username": username, "profile": profile})
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const text = await response.text();
+                const data = parseCSVString(text);
+              	data_dict = {[url.name]: data};
+                console.log('fetch complete ' + url['name']);
+              return data_dict;
+            } catch (error) {
+                console.error('Error fetching or processing CSV:', error);
+            }
+        }
+
+        // Function to convert each array of values into a dictionary using the predefined keys
+        function arraysToDicts(data, keys) {
+            return data.map(values => {
+                let dict = {};
+                values.forEach((value, index) => {
+                    // Use the key from dictKeys if available, otherwise use the index as the key
+                    let key = keys[index] || index;
+                    dict[key] = value;
+                });
+                return dict;
+            });
+        }
+        // Function to convert each line into a list of dictionaries
+        function linesToListOfDicts(lines) {
+            // Create a list of dictionaries for this line
+            return lines.map((value, index) => {
+                return {
+                    title: value, // Use the corresponding key as the title
+                    field: value        // Use the value from the line
+                };
+            });
+        }
+
+        function parseCSVString(csvString) {
+            const lines = csvString.trim().split('\n');
+            var headers = lines[0].replace('\r','').split(',');
+            var data = lines.slice(1).map(line => line.replace('\r','').split(','));
+            data = arraysToDicts(data, headers);
+            headers = linesToListOfDicts(headers);
+            headers = [headers];
+            headers = headers.concat(data);
+            return headers; // Returns an object containing headers and data
+        }
+
+        var csv_data = [];
+        const csvUrls = [
+            {'name': 'Manufacturer Spec', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Manufacturer Spec'},
+            {'name': 'Chg(10Sec)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Chg(10Sec)'},
+            {'name': 'Chg(Cont)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Chg(Cont)'},
+            {'name': 'Chg(Inst)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Chg(Inst)'},
+            {'name': 'Dch(10Sec)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Dch(10Sec)'},
+            {'name': 'Dch(Cont)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Dch(Cont)'},
+            {'name': 'Depolar Time', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Depolar Time'},
+            {'name': 'Hysteresis', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Hysteresis'},
+            {'name': 'OCV', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/OCV'},
+            {'name': 'Res(10Sec)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Res(10Sec)'},
+            {'name': 'Res(Cont)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Res(Cont)'},
+            {'name': 'Res(Inst)', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/Res(Inst)'},
+            {'name': 'SOA', 'url': 'https://shorecode2.pythonanywhere.com/get-csv/SOA'}
+        ];
+        /*
+        const makeTableUrl = "https://shorecode2.pythonanywhere.com/make-tables";
+        fetch(makeTableUrl, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({"profile": profile, "username": username})
+        }).then(tableMade => {
+        */
+        Promise.all(csvUrls.map(url => fetchAndProcessCsv(url, username, profile)))
+             .then(results => {
+          // All fetch operations are complete, and 'results' contains all the csv_data
+            csv_data = results;
+            const page = "https://shorecode2.pythonanywhere.com/batterywiz";
+            console.log('fetch batterywiz');
+                fetch(page, {
+                     method: "POST",
+                     headers: {"Content-Type": "application/json"},
+                     body: JSON.stringify({"profile": profile, "username": username, "param_table": csv_data})
+                })
+                .then(response=>response.text()).then(data=>{
+                  console.log('writing new page');
+                  document.open();
+                  document.write(data); // Replace the current document with the new HTML
+                  console.log('finished writing');
+                  document.close();
+                })
+                  .catch((error) => {
+                  console.error("Error:", error);
+                });
+            });
+        /*
+        .catch(error => {
+            console.error('Error with fetching CSVs:', error);
+        });
+        */
+
+   // });
+  };
+</script>
+
 </body>
 </html>
