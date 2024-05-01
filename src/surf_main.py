@@ -18,7 +18,8 @@ from qt_material import apply_stylesheet
 import sys
 from surf_logging import set_logging
 from surf_filepaths import Files
-from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor, CustomCompleter)
+from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor,
+                              CustomCompleter, FindReplaceWidget)
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect, QStringListModel, QTimer, 
     QSize, QTime, QUrl, Qt, QEvent)
@@ -417,6 +418,13 @@ class Ui_MainWindow(QMainWindow):
             QScrollBar {
             background-color: #333333;
             }
+            QLineEdit {
+            color: grey;            
+            }
+            QLineEdit:focus {
+            color: white;            
+            }
+            
             ''')
         files = Files()
         filepaths = files.get_files_list()
@@ -492,7 +500,7 @@ class Ui_MainWindow(QMainWindow):
         #self.aiTemplateBtn.clicked.connect()
         #self.skeletonBtn.clicked.connect()
         #self.cssEditorBtn.clicked.connect()
-        #self.findReplaceBtn.clicked.connect()
+        self.findReplaceBtn.clicked.connect(self.find_replace)
         #self.externalDepsBtn.clicked.connect()
         #self.jsSandboxBtn.clicked.connect()
         #self.indentationBtn.clicked.connect()
@@ -508,6 +516,13 @@ class Ui_MainWindow(QMainWindow):
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
+
+    def find_replace(self):
+        current_tab_idx = self.editorWidget.currentIndex()
+        editor = self.editor_tabs[current_tab_idx]
+        find_replace = FindReplaceWidget(editor)
+        self.splitWidget.addTab(find_replace, 'Find/Replace')
+        
 
     def update_browsers(self, filename):
         local_url = QUrl.fromLocalFile(filename)
