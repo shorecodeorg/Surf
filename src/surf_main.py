@@ -34,7 +34,7 @@ from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QMainWindow,
     QWidget, QFileDialog, QSplitter, QPlainTextEdit)
 
 class CustomCompleter(QCompleter):
-    def __init__(self, vocabulary, parent=None):
+    def __init__(self, vocabulary, text_editor, parent=None):
         super(CustomCompleter, self).__init__(vocabulary, parent)
         self.setPopup(QCompleter.popup(self))  # Ensure the popup is created
         self.popup().setStyleSheet("""
@@ -43,7 +43,29 @@ class CustomCompleter(QCompleter):
                 line-height: 0.4;
             }
         """)
+        self.popup().installEventFilter(self)
         self.popup().setCurrentIndex(self.completionModel().index(0, 0))
+        self.activated.connect(lambda completion: self.insertCompletion(completion, text_editor))
+        
+    def eventFilter(self, obj, event):
+        if event.type() == QKeyEvent.Type.KeyPress:
+            print(dir(obj.keyPressEvent))
+            print(event.key())
+            print(dir(Qt.Key))
+            if event.key() == Qt.Key.Key_Tab.numerator and self.popup().isVisible():
+                print('yes')
+                # Simulate pressing the Enter key to select the completion')
+                QApplication.sendEvent(self.popup(), QKeyEvent(QKeyEvent.MousePressEvent, Qt.Key_Enter, event.modifiers()))
+                return True
+        return super(CustomCompleter, self).eventFilter(obj, event)
+    
+    def insertCompletion(self, completion, text_editor):
+        tc = text_editor.textCursor()
+        extra = len(completion) - len(self.completionPrefix())
+        tc.movePosition(QTextCursor.MoveOperation.Left)
+        tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
+        tc.insertText(completion[-extra:])
+        text_editor.setTextCursor(tc)    
 
 class Ui_MainWindow(QMainWindow):
     def __init__(self, parent=None):
@@ -55,39 +77,28 @@ class Ui_MainWindow(QMainWindow):
             "var", "let", "const", "function", "return", "if", "else", "for", "while",
             "background-color:", "font-size:", "text-align:", "display:", "color:",
             "document.getElementById", "addEventListener", "window.onload"
-        ]
-        
-        self.completer = CustomCompleter(self.vocabulary)
+        ]        
+        self.completer = CustomCompleter(self.vocabulary, text_editor, text_editor)
         self.completer.setModel(QStringListModel(self.vocabulary))
         self.completer.setWidget(text_editor)
         self.completer.setCompletionMode(QCompleter.PopupCompletion)
-        self.completer.activated.connect(lambda completion: self.insertCompletion(completion, text_editor))        
+        print(dir(self.completer.activated))
+        print(dir(self.completer))
+
         # Install the event filter to capture Tab key press
         text_editor.installEventFilter(self)
-        # Handle Tab key in the text editor's event filter
+        
     def eventFilter(self, obj, event):
-        if obj == self.textEdit and event.type() == QKeyEvent.KeyPress:
-            if event.key() == Qt.Key_Tab and self.completer.popup().isVisible():
-                # Simulate pressing the Enter key to select the completion
-                QApplication.sendEvent(self.completer.popup(), QKeyEvent(QKeyEvent.KeyPress, Qt.Key_Enter, event.modifiers()))
+        if obj.objectName == 'textEdit' and event.type() == QKeyEvent.KeyPress:
+            if event.key() == Qt.Key.Key_Tab.numerator and self.completer.popup().isVisible():
+                event.accept()                
                 return True
-            elif event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
+            elif event.key() == Qt.Key.Key_Enter.numerator or event.key() == Qt.Key.Key_Return.numerator:
                 if self.completer.popup().isVisible():
                     event.accept()
                     return True
         return super(Ui_MainWindow, self).eventFilter(obj, event)
-        
-    def show_completer(self):
-        self.completer.complete()    
-        
-    def insertCompletion(self, completion, text_editor):
-        tc = text_editor.textCursor()
-        extra = len(completion) - len(self.completer.completionPrefix())
-        tc.movePosition(QTextCursor.Left)
-        tc.movePosition(QTextCursor.EndOfWord)
-        tc.insertText(completion[-extra:])
-        text_editor.setTextCursor(tc)
-    
+                   
     def updateCompleterPosition(self, text_editor):
         tc = text_editor.textCursor()
         tc.select(QTextCursor.WordUnderCursor)
@@ -389,6 +400,11 @@ class Ui_MainWindow(QMainWindow):
         self.gitBtn.setObjectName(u"gitBtn")
 
         self.verticalLayout_10.addWidget(self.gitBtn)
+        
+        self.flaskBtn = QPushButton(self.surfMenu)
+        self.flaskBtn.setObjectName(u"flaskBtn")
+
+        self.verticalLayout_10.addWidget(self.flaskBtn)        
 
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
@@ -408,7 +424,11 @@ class Ui_MainWindow(QMainWindow):
             QMenu::item:selected{
             background-color:#ffa458;
             color:#000000;
-            }''')
+            }
+            QScrollBar {
+            background-color: #333333;
+            }
+            ''')
         files = Files()
         filepaths = files.get_files_list()
         self.logger = set_logging('surf', filepaths[0])
@@ -488,6 +508,7 @@ class Ui_MainWindow(QMainWindow):
         #self.jsSandboxBtn.clicked.connect()
         #self.indentationBtn.clicked.connect()
         #self.gitBtn.clicked.connect()
+        #self.flaskBtn.clicked.connect()
                        
         self.splitWidget.setCurrentIndex(0)
         self.editorWidget.setCurrentIndex(0)
@@ -611,6 +632,7 @@ class Ui_MainWindow(QMainWindow):
         self.jsSandboxBtn.setText(QCoreApplication.translate("MainWindow", u"JS Sandbox", None))
         self.indentationBtn.setText(QCoreApplication.translate("MainWindow", u"Indentation", None))
         self.gitBtn.setText(QCoreApplication.translate("MainWindow", u"GIT", None))
+        self.flaskBtn.setText(QCoreApplication.translate("MainWindow", u"Flask Compat", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuSettings.setTitle(QCoreApplication.translate("MainWindow", u"Settings", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
