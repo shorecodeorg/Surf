@@ -20,19 +20,19 @@ from surf_logging import set_logging
 from surf_filepaths import Files
 from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor, CssEditor, 
                               CustomCompleter, FindReplaceWidget,
-                              SyntaxVocabulary)
+                              SyntaxVocabulary, ClosableTabBar)
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect, QStringListModel, QTimer, 
     QSize, QTime, QUrl, Qt, QEvent)
 from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QCursor, QFont, QFontDatabase, QGradient, QTextFormat, 
     QIcon, QImage, QKeySequence, QLinearGradient, QKeyEvent, 
-    QPainter, QPalette, QPixmap, QRadialGradient,  
-    QTransform, QTextCursor, QMouseEvent)
+    QPainter, QPalette, QPixmap, QRadialGradient, QKeySequence, 
+    QTransform, QTextCursor, QMouseEvent, QShortcut)
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QMainWindow,
     QMenu, QMenuBar, QPushButton, QSizePolicy, QCompleter, 
-    QStatusBar, QTabWidget, QTextEdit, QVBoxLayout,
+    QStatusBar, QTabWidget, QTextEdit, QVBoxLayout,  
     QWidget, QFileDialog, QSplitter, QPlainTextEdit)
 
 class Ui_MainWindow(QMainWindow):
@@ -153,8 +153,10 @@ class Ui_MainWindow(QMainWindow):
         self.splitWidget = QTabWidget(self.centralwidget)
         self.splitWidget.setObjectName(u"splitWidget")
         self.splitWidget.setSizePolicy(self.sizePolicy)
+        
         self.sizePolicy.setHeightForWidth(self.splitWidget.sizePolicy().hasHeightForWidth())
         self.splitWidget.setDocumentMode(True)
+        self.splitWidget.setTabBar(ClosableTabBar(self))
         self.splitTab1 = QWidget()
         self.splitTab1.setObjectName(u"splitTab1")
         self.sizePolicy.setHeightForWidth(self.splitTab1.sizePolicy().hasHeightForWidth())
@@ -176,6 +178,7 @@ class Ui_MainWindow(QMainWindow):
         self.editorWidget.setElideMode(Qt.ElideLeft)
         self.editorWidget.setDocumentMode(True)
         self.editorWidget.setTabBarAutoHide(False)
+        self.editorWidget.setTabBar(ClosableTabBar(self))
         self.fileTab1 = QWidget()
         self.fileTab1.setObjectName(u"fileTab1")
         self.sizePolicy1.setHeightForWidth(self.fileTab1.sizePolicy().hasHeightForWidth())
@@ -483,6 +486,9 @@ class Ui_MainWindow(QMainWindow):
         self.actionNew.triggered.connect(self.add_tab)
         self.actionOpen.triggered.connect(self.open_file)
         self.actionSave.triggered.connect(lambda: self.save_tab(self.editorWidget.currentIndex()))
+        # Setup Ctrl+S shortcut for saving the current tab
+        self.save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
+        self.save_shortcut.activated.connect(lambda: self.save_tab(self.editorWidget.currentIndex()))
         self.actionSave_as.triggered.connect(lambda: self.save_tab(self.editorWidget.currentIndex(), dialog=True))
         self.actionQuit.triggered.connect(sys.exit)
         #self.actionPreferences.triggered.connect()
@@ -501,6 +507,8 @@ class Ui_MainWindow(QMainWindow):
         #self.indentationBtn.clicked.connect()
         #self.gitBtn.clicked.connect()
         #self.flaskBtn.clicked.connect()
+        self.editorWidget.tabBar().tabCloseRequested.connect(lambda idx: self.remove_tab(idx, self.editorWidget, pop_from_list=True))
+        self.splitWidget.tabBar().tabCloseRequested.connect(lambda idx2: self.remove_tab(idx2, self.splitWidget))
                        
         self.splitWidget.setCurrentIndex(0)
         self.editorWidget.setCurrentIndex(0)
@@ -512,18 +520,28 @@ class Ui_MainWindow(QMainWindow):
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
 
+    def closeTab(self, index, tab_widget):
+        tab_widget.removeTab(index)
+        self.editor_tabs.pop(index)
+
     def css_editor(self):
-        current_tab_idx = self.editorWidget.currentIndex()
-        editor = self.editor_tabs[current_tab_idx]        
-        css_editor = CssEditor(self.splitWidget)
-        button = css_editor.get_button()
-        button.clicked.connect(lambda: css_editor.find_selector(editor))
+        try:            
+            current_tab_idx = self.editorWidget.currentIndex()
+            editor = self.editor_tabs[current_tab_idx]        
+            css_editor = CssEditor(self.splitWidget)
+            button = css_editor.get_button()
+            button.clicked.connect(lambda: css_editor.find_selector(editor))
+        except IndexError:
+            print('Cannot open CSS EDITOR, Open editor first')
 
     def find_replace(self):
-        current_tab_idx = self.editorWidget.currentIndex()
-        editor = self.editor_tabs[current_tab_idx]
-        find_replace = FindReplaceWidget(editor)
-        self.splitWidget.addTab(find_replace, 'Find/Replace')
+        try:            
+            current_tab_idx = self.editorWidget.currentIndex()
+            editor = self.editor_tabs[current_tab_idx]
+            find_replace = FindReplaceWidget(editor)
+            self.splitWidget.addTab(find_replace, 'Find/Replace')
+        except IndexError:
+            print('Cannot open find/replace, Open editor first')
         
 
     def update_browsers(self, filename):
@@ -553,13 +571,13 @@ class Ui_MainWindow(QMainWindow):
         self.setup_completer(self.textEdit, self)
         self.textEdit.cursorPositionChanged.connect(lambda: self.updateCompleterPosition(self.textEdit))        
     
-    def remove_tab(self):
-        active_tab_index = self.editorWidget.currentIndex()
-        active_tab_name = self.editorWidget.tabText(active_tab_index)
-        self.editorWidget.removeTab(active_tab_index)
-        self.editor_tabs.pop(active_tab_index)
-        if active_tab_name in self.open_files.keys():
-            del self.open_files[active_tab_name]
+    def remove_tab(self, idx, editor, pop_from_list=False):
+        active_tab_name = self.editorWidget.tabText(idx)
+        editor.removeTab(idx)
+        if pop_from_list:
+            self.editor_tabs.pop(idx)
+            if active_tab_name in self.open_files.keys():
+                del self.open_files[active_tab_name]
     
     def save_tab(self, idx, dialog=False):        
         active_tab_name = self.editorWidget.tabText(idx)
