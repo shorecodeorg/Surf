@@ -21,12 +21,12 @@ from surf_filepaths import Files
 from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor)
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect, QStringListModel, QTimer, 
-    QSize, QTime, QUrl, Qt)
+    QSize, QTime, QUrl, Qt, QEvent)
 from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QCursor, QFont, QFontDatabase, QGradient, QTextFormat, 
     QIcon, QImage, QKeySequence, QLinearGradient, QKeyEvent, 
-    QPainter, QPalette, QPixmap, QRadialGradient,
-    QTransform, QTextCursor)
+    QPainter, QPalette, QPixmap, QRadialGradient,  
+    QTransform, QTextCursor, QMouseEvent)
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QMainWindow,
     QMenu, QMenuBar, QPushButton, QSizePolicy, QCompleter, 
@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QMainWindow,
 class CustomCompleter(QCompleter):
     def __init__(self, vocabulary, text_editor, parent=None):
         super(CustomCompleter, self).__init__(vocabulary, parent)
+        #self.pop_up = QCompleter.popup(self)
         self.setPopup(QCompleter.popup(self))  # Ensure the popup is created
         self.popup().setStyleSheet("""
             QListView {
@@ -43,29 +44,34 @@ class CustomCompleter(QCompleter):
                 line-height: 0.4;
             }
         """)
-        self.popup().installEventFilter(self)
-        self.popup().setCurrentIndex(self.completionModel().index(0, 0))
+        self.editor = text_editor
+        self.installEventFilter(self)
         self.activated.connect(lambda completion: self.insertCompletion(completion, text_editor))
+        files = Files()
+        filepaths = files.get_files_list()
+        self.logger = set_logging('surf2', filepaths[0])        
         
     def eventFilter(self, obj, event):
         if event.type() == QKeyEvent.Type.KeyPress:
-            print(dir(obj.keyPressEvent))
-            print(event.key())
-            print(dir(Qt.Key))
             if event.key() == Qt.Key.Key_Tab.numerator and self.popup().isVisible():
-                print('yes')
-                # Simulate pressing the Enter key to select the completion')
-                QApplication.sendEvent(self.popup(), QKeyEvent(QKeyEvent.MousePressEvent, Qt.Key_Enter, event.modifiers()))
+                self.insertCompletion(self.currentCompletion(), self.editor)
                 return True
         return super(CustomCompleter, self).eventFilter(obj, event)
     
     def insertCompletion(self, completion, text_editor):
-        tc = text_editor.textCursor()
-        extra = len(completion) - len(self.completionPrefix())
-        tc.movePosition(QTextCursor.MoveOperation.Left)
-        tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
-        tc.insertText(completion[-extra:])
-        text_editor.setTextCursor(tc)    
+        try:
+            
+            tc = text_editor.textCursor()
+            extra = len(completion) - len(self.completionPrefix())
+            #tc.movePosition(QTextCursor.MoveOperation.Left)
+            tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
+            tc.insertText(completion[-extra:])
+            text_editor.setTextCursor(tc)
+
+        except AttributeError as e:
+            self.logger.info(e)
+            sys.exit()
+    
 
 class Ui_MainWindow(QMainWindow):
     def __init__(self, parent=None):
@@ -82,22 +88,6 @@ class Ui_MainWindow(QMainWindow):
         self.completer.setModel(QStringListModel(self.vocabulary))
         self.completer.setWidget(text_editor)
         self.completer.setCompletionMode(QCompleter.PopupCompletion)
-        print(dir(self.completer.activated))
-        print(dir(self.completer))
-
-        # Install the event filter to capture Tab key press
-        text_editor.installEventFilter(self)
-        
-    def eventFilter(self, obj, event):
-        if obj.objectName == 'textEdit' and event.type() == QKeyEvent.KeyPress:
-            if event.key() == Qt.Key.Key_Tab.numerator and self.completer.popup().isVisible():
-                event.accept()                
-                return True
-            elif event.key() == Qt.Key.Key_Enter.numerator or event.key() == Qt.Key.Key_Return.numerator:
-                if self.completer.popup().isVisible():
-                    event.accept()
-                    return True
-        return super(Ui_MainWindow, self).eventFilter(obj, event)
                    
     def updateCompleterPosition(self, text_editor):
         tc = text_editor.textCursor()
