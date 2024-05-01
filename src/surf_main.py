@@ -18,7 +18,7 @@ from qt_material import apply_stylesheet
 import sys
 from surf_logging import set_logging
 from surf_filepaths import Files
-from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor,
+from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor, CssEditor, 
                               CustomCompleter, FindReplaceWidget)
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect, QStringListModel, QTimer, 
@@ -504,7 +504,7 @@ class Ui_MainWindow(QMainWindow):
         #self.aiMetaDataBtn.clicked.connect()
         #self.aiTemplateBtn.clicked.connect()
         #self.skeletonBtn.clicked.connect()
-        #self.cssEditorBtn.clicked.connect()
+        self.cssEditorBtn.clicked.connect(self.css_editor)
         self.findReplaceBtn.clicked.connect(self.find_replace)
         #self.externalDepsBtn.clicked.connect()
         #self.jsSandboxBtn.clicked.connect()
@@ -521,6 +521,13 @@ class Ui_MainWindow(QMainWindow):
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
+
+    def css_editor(self):
+        current_tab_idx = self.editorWidget.currentIndex()
+        editor = self.editor_tabs[current_tab_idx]        
+        css_editor = CssEditor(self.splitWidget)
+        button = css_editor.get_button()
+        button.clicked.connect(lambda: css_editor.find_selector(editor))
 
     def find_replace(self):
         current_tab_idx = self.editorWidget.currentIndex()
