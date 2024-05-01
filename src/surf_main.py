@@ -121,20 +121,19 @@ class Ui_MainWindow(QMainWindow):
     
         # Check if the completion prefix matches any vocabulary item
         matches = any(vocab.startswith(completion_prefix) for vocab in self.vocabulary)
+        matches_list = [vocab for vocab in self.vocabulary if vocab.startswith(completion_prefix)]
+        print(matches_list)
     
         if completion_prefix and matches:
             cr = text_editor.cursorRect(tc)
-            print(cr)
             top = cr.top()
-            print(top)
             bottom = cr.bottom()
             cr.setTop(top+10)
             cr.setBottom(bottom+10)
-            print(cr)
     
             # Dynamically adjust the width of the completer popup
             popup = self.completer.popup()
-            maxItemWidth = max(popup.fontMetrics().horizontalAdvance(item) for item in self.vocabulary) + 10  # Adding a small padding
+            maxItemWidth = max(popup.fontMetrics().horizontalAdvance(item) for item in matches_list) + 25  # Adding a small padding
             popupWidth = max(cr.width(), maxItemWidth + popup.verticalScrollBar().sizeHint().width())
             cr.setWidth(popupWidth)
     
