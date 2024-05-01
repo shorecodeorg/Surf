@@ -19,7 +19,8 @@ import sys
 from surf_logging import set_logging
 from surf_filepaths import Files
 from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor, CssEditor, 
-                              CustomCompleter, FindReplaceWidget)
+                              CustomCompleter, FindReplaceWidget,
+                              SyntaxVocabulary)
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect, QStringListModel, QTimer, 
     QSize, QTime, QUrl, Qt, QEvent)
@@ -39,13 +40,8 @@ class Ui_MainWindow(QMainWindow):
         super(Ui_MainWindow, self).__init__(parent)
     def setup_completer(self, text_editor, MainWindow):
         # Vocabulary for HTML, CSS, and JavaScript
-        self.vocabulary = [
-            "<html>", "<head>", "<body>", "<script>", "<div>", "<span>", "<style>",
-            "<br>", "<hr>", "<header>", "<script>", "<div>", "<span>", "<style>",
-            "var", "let", "const", "function", "return", "if", "else", "for", "while",
-            "background-color:", "font-size:", "text-align:", "display:", "color:",
-            "document.getElementById", "addEventListener", "window.onload"
-        ]        
+        vocab = SyntaxVocabulary()
+        self.vocabulary = vocab.get_all_vocab()
         self.completer = CustomCompleter(self.vocabulary, text_editor, text_editor)
         self.completer.setModel(QStringListModel(self.vocabulary))
         self.completer.setWidget(text_editor)
