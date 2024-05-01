@@ -41,7 +41,9 @@ class CustomCompleter(QCompleter):
         self.popup().setStyleSheet("""
             QListView {
                 border: 1px solid #ffa458;
-                line-height: 0.4;
+            }
+            QListView::item {}
+                height:10px;
             }
         """)
         self.editor = text_editor
@@ -63,7 +65,6 @@ class CustomCompleter(QCompleter):
             
             tc = text_editor.textCursor()
             extra = len(completion) - len(self.completionPrefix())
-            #tc.movePosition(QTextCursor.MoveOperation.Left)
             tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
             tc.insertText(completion[-extra:])
             text_editor.setTextCursor(tc)
@@ -80,6 +81,7 @@ class Ui_MainWindow(QMainWindow):
         # Vocabulary for HTML, CSS, and JavaScript
         self.vocabulary = [
             "<html>", "<head>", "<body>", "<script>", "<div>", "<span>", "<style>",
+            "<br>", "<hr>", "<header>", "<script>", "<div>", "<span>", "<style>",
             "var", "let", "const", "function", "return", "if", "else", "for", "while",
             "background-color:", "font-size:", "text-align:", "display:", "color:",
             "document.getElementById", "addEventListener", "window.onload"
@@ -91,14 +93,54 @@ class Ui_MainWindow(QMainWindow):
                    
     def updateCompleterPosition(self, text_editor):
         tc = text_editor.textCursor()
-        tc.select(QTextCursor.WordUnderCursor)
-        self.completer.setCompletionPrefix(tc.selectedText())
-        if self.completer.completionPrefix() != "":
-            self.completer.complete()
-        cr = text_editor.cursorRect(tc)
-        cr.setWidth(self.completer.popup().sizeHintForColumn(0)
-                    + self.completer.popup().verticalScrollBar().sizeHint().width())
-        self.completer.complete(cr)  # Popup it up!    
+        text = text_editor.toPlainText()
+        pos = tc.position()
+    
+        # Do not show the completer if text is selected
+        if tc.hasSelection():
+            self.completer.popup().hide()
+            return
+    
+        # Find the start of the word/tag
+        start_pos = pos
+        while start_pos > 0 and not text[start_pos - 1].isspace():
+            start_pos -= 1
+            if text[start_pos] in ['<', '>']:  # Adjust for HTML tags
+                break
+    
+        # Find the end of the word/tag
+        end_pos = pos
+        while end_pos < len(text) and not text[end_pos].isspace():
+            end_pos += 1
+            if text[end_pos - 1] in ['<', '>']:  # Adjust for HTML tags
+                break
+    
+        # Set the completion prefix based on the start and end positions
+        completion_prefix = text[start_pos:end_pos]
+        self.completer.setCompletionPrefix(completion_prefix)
+    
+        # Check if the completion prefix matches any vocabulary item
+        matches = any(vocab.startswith(completion_prefix) for vocab in self.vocabulary)
+    
+        if completion_prefix and matches:
+            cr = text_editor.cursorRect(tc)
+            print(cr)
+            top = cr.top()
+            print(top)
+            bottom = cr.bottom()
+            cr.setTop(top+10)
+            cr.setBottom(bottom+10)
+            print(cr)
+    
+            # Dynamically adjust the width of the completer popup
+            popup = self.completer.popup()
+            maxItemWidth = max(popup.fontMetrics().horizontalAdvance(item) for item in self.vocabulary) + 10  # Adding a small padding
+            popupWidth = max(cr.width(), maxItemWidth + popup.verticalScrollBar().sizeHint().width())
+            cr.setWidth(popupWidth)
+    
+            self.completer.complete(cr)  # Popup it up!
+        else:
+            self.completer.popup().hide()  # Hide the popup if no match is found
         
     def setup_menu(self, MainWindow):
         self.actionNew = QAction(MainWindow)
