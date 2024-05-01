@@ -424,7 +424,12 @@ class Ui_MainWindow(QMainWindow):
             QLineEdit:focus {
             color: white;            
             }
-            
+            QPushButton:hover {
+              background-color: #4d2600;
+            }
+            QPushButton:pressed {
+              color: #ffd9b3;
+            }
             ''')
         files = Files()
         filepaths = files.get_files_list()
