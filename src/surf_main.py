@@ -18,7 +18,7 @@ from qt_material import apply_stylesheet
 import sys
 from surf_logging import set_logging
 from surf_filepaths import Files
-from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor)
+from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor, CustomCompleter)
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect, QStringListModel, QTimer, 
     QSize, QTime, QUrl, Qt, QEvent)
@@ -32,47 +32,6 @@ from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QMainWindow,
     QMenu, QMenuBar, QPushButton, QSizePolicy, QCompleter, 
     QStatusBar, QTabWidget, QTextEdit, QVBoxLayout,
     QWidget, QFileDialog, QSplitter, QPlainTextEdit)
-
-class CustomCompleter(QCompleter):
-    def __init__(self, vocabulary, text_editor, parent=None):
-        super(CustomCompleter, self).__init__(vocabulary, parent)
-        #self.pop_up = QCompleter.popup(self)
-        self.setPopup(QCompleter.popup(self))  # Ensure the popup is created
-        self.popup().setStyleSheet("""
-            QListView {
-                border: 1px solid #ffa458;
-            }
-            QListView::item {}
-                height:10px;
-            }
-        """)
-        self.editor = text_editor
-        self.installEventFilter(self)
-        self.activated.connect(lambda completion: self.insertCompletion(completion, text_editor))
-        files = Files()
-        filepaths = files.get_files_list()
-        self.logger = set_logging('surf2', filepaths[0])        
-        
-    def eventFilter(self, obj, event):
-        if event.type() == QKeyEvent.Type.KeyPress:
-            if event.key() == Qt.Key.Key_Tab.numerator and self.popup().isVisible():
-                self.insertCompletion(self.currentCompletion(), self.editor)
-                return True
-        return super(CustomCompleter, self).eventFilter(obj, event)
-    
-    def insertCompletion(self, completion, text_editor):
-        try:
-            
-            tc = text_editor.textCursor()
-            extra = len(completion) - len(self.completionPrefix())
-            tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
-            tc.insertText(completion[-extra:])
-            text_editor.setTextCursor(tc)
-
-        except AttributeError as e:
-            self.logger.info(e)
-            sys.exit()
-    
 
 class Ui_MainWindow(QMainWindow):
     def __init__(self, parent=None):
@@ -122,7 +81,6 @@ class Ui_MainWindow(QMainWindow):
         # Check if the completion prefix matches any vocabulary item
         matches = any(vocab.startswith(completion_prefix) for vocab in self.vocabulary)
         matches_list = [vocab for vocab in self.vocabulary if vocab.startswith(completion_prefix)]
-        print(matches_list)
     
         if completion_prefix and matches:
             cr = text_editor.cursorRect(tc)
