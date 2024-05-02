@@ -18,85 +18,97 @@ from qt_material import apply_stylesheet
 import sys
 from surf_logging import set_logging
 from surf_filepaths import Files
-from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor, CssEditor, 
-                              CustomCompleter, FindReplaceWidget,
-                              SyntaxVocabulary, ClosableTabBar,
-                              SkeletonTree)
+from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor)
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect, QStringListModel, QTimer, 
-    QSize, QTime, QUrl, Qt, QEvent)
+    QSize, QTime, QUrl, Qt)
 from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QCursor, QFont, QFontDatabase, QGradient, QTextFormat, 
     QIcon, QImage, QKeySequence, QLinearGradient, QKeyEvent, 
-    QPainter, QPalette, QPixmap, QRadialGradient, QKeySequence, 
-    QTransform, QTextCursor, QMouseEvent, QShortcut)
+    QPainter, QPalette, QPixmap, QRadialGradient,
+    QTransform, QTextCursor)
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QMainWindow,
     QMenu, QMenuBar, QPushButton, QSizePolicy, QCompleter, 
-    QStatusBar, QTabWidget, QTextEdit, QVBoxLayout,  
-    QWidget, QFileDialog, QSplitter, QPlainTextEdit,
-    QHBoxLayout)
+    QStatusBar, QTabWidget, QTextEdit, QVBoxLayout,
+    QWidget, QFileDialog, QSplitter, QPlainTextEdit)
+
+class CustomCompleter(QCompleter):
+    def __init__(self, vocabulary, text_editor, parent=None):
+        super(CustomCompleter, self).__init__(vocabulary, parent)
+        self.setPopup(QCompleter.popup(self))  # Ensure the popup is created
+        self.popup().setStyleSheet("""
+            QListView {
+                border: 1px solid #ffa458;
+                line-height: 0.4;
+            }
+        """)
+        self.popup().installEventFilter(self)
+        self.popup().setCurrentIndex(self.completionModel().index(0, 0))
+        self.activated.connect(lambda completion: self.insertCompletion(completion, text_editor))
+        
+    def eventFilter(self, obj, event):
+        if event.type() == QKeyEvent.Type.KeyPress:
+            print(dir(obj.keyPressEvent))
+            print(event.key())
+            print(dir(Qt.Key))
+            if event.key() == Qt.Key.Key_Tab.numerator and self.popup().isVisible():
+                print('yes')
+                # Simulate pressing the Enter key to select the completion')
+                QApplication.sendEvent(self.popup(), QKeyEvent(QKeyEvent.MousePressEvent, Qt.Key_Enter, event.modifiers()))
+                return True
+        return super(CustomCompleter, self).eventFilter(obj, event)
+    
+    def insertCompletion(self, completion, text_editor):
+        tc = text_editor.textCursor()
+        extra = len(completion) - len(self.completionPrefix())
+        tc.movePosition(QTextCursor.MoveOperation.Left)
+        tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
+        tc.insertText(completion[-extra:])
+        text_editor.setTextCursor(tc)    
 
 class Ui_MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super(Ui_MainWindow, self).__init__(parent)
     def setup_completer(self, text_editor, MainWindow):
         # Vocabulary for HTML, CSS, and JavaScript
-        vocab = SyntaxVocabulary()
-        self.vocabulary = vocab.get_all_vocab()
+        self.vocabulary = [
+            "<html>", "<head>", "<body>", "<script>", "<div>", "<span>", "<style>",
+            "var", "let", "const", "function", "return", "if", "else", "for", "while",
+            "background-color:", "font-size:", "text-align:", "display:", "color:",
+            "document.getElementById", "addEventListener", "window.onload"
+        ]        
         self.completer = CustomCompleter(self.vocabulary, text_editor, text_editor)
         self.completer.setModel(QStringListModel(self.vocabulary))
         self.completer.setWidget(text_editor)
         self.completer.setCompletionMode(QCompleter.PopupCompletion)
+        print(dir(self.completer.activated))
+        print(dir(self.completer))
+
+        # Install the event filter to capture Tab key press
+        text_editor.installEventFilter(self)
+        
+    def eventFilter(self, obj, event):
+        if obj.objectName == 'textEdit' and event.type() == QKeyEvent.KeyPress:
+            if event.key() == Qt.Key.Key_Tab.numerator and self.completer.popup().isVisible():
+                event.accept()                
+                return True
+            elif event.key() == Qt.Key.Key_Enter.numerator or event.key() == Qt.Key.Key_Return.numerator:
+                if self.completer.popup().isVisible():
+                    event.accept()
+                    return True
+        return super(Ui_MainWindow, self).eventFilter(obj, event)
                    
     def updateCompleterPosition(self, text_editor):
         tc = text_editor.textCursor()
-        text = text_editor.toPlainText()
-        pos = tc.position()
-    
-        # Do not show the completer if text is selected
-        if tc.hasSelection():
-            self.completer.popup().hide()
-            return
-    
-        # Find the start of the word/tag
-        start_pos = pos
-        while start_pos > 0 and not text[start_pos - 1].isspace():
-            start_pos -= 1
-            if text[start_pos] in ['<', '>']:  # Adjust for HTML tags
-                break
-    
-        # Find the end of the word/tag
-        end_pos = pos
-        while end_pos < len(text) and not text[end_pos].isspace():
-            end_pos += 1
-            if text[end_pos - 1] in ['<', '>']:  # Adjust for HTML tags
-                break
-    
-        # Set the completion prefix based on the start and end positions
-        completion_prefix = text[start_pos:end_pos]
-        self.completer.setCompletionPrefix(completion_prefix)
-    
-        # Check if the completion prefix matches any vocabulary item
-        matches = any(vocab.startswith(completion_prefix) for vocab in self.vocabulary)
-        matches_list = [vocab for vocab in self.vocabulary if vocab.startswith(completion_prefix)]
-    
-        if completion_prefix and matches:
-            cr = text_editor.cursorRect(tc)
-            top = cr.top()
-            bottom = cr.bottom()
-            cr.setTop(top+10)
-            cr.setBottom(bottom+10)
-    
-            # Dynamically adjust the width of the completer popup
-            popup = self.completer.popup()
-            maxItemWidth = max(popup.fontMetrics().horizontalAdvance(item) for item in matches_list) + 25  # Adding a small padding
-            popupWidth = max(cr.width(), maxItemWidth + popup.verticalScrollBar().sizeHint().width())
-            cr.setWidth(popupWidth)
-    
-            self.completer.complete(cr)  # Popup it up!
-        else:
-            self.completer.popup().hide()  # Hide the popup if no match is found
+        tc.select(QTextCursor.WordUnderCursor)
+        self.completer.setCompletionPrefix(tc.selectedText())
+        if self.completer.completionPrefix() != "":
+            self.completer.complete()
+        cr = text_editor.cursorRect(tc)
+        cr.setWidth(self.completer.popup().sizeHintForColumn(0)
+                    + self.completer.popup().verticalScrollBar().sizeHint().width())
+        self.completer.complete(cr)  # Popup it up!    
         
     def setup_menu(self, MainWindow):
         self.actionNew = QAction(MainWindow)
@@ -113,6 +125,10 @@ class Ui_MainWindow(QMainWindow):
         self.actionPreferences.setObjectName(u"actionPreferences")
         self.actionAbout_Surf = QAction(MainWindow)
         self.actionAbout_Surf.setObjectName(u"actionAbout_Surf")
+        self.actionJoin = QAction(MainWindow)
+        self.actionJoin.setObjectName(u"actionJoin")
+        self.actionHide_Preview = QAction(MainWindow)
+        self.actionHide_Preview.setObjectName(u"actionHide_Preview")
         self.actionNew_Preview_Window = QAction(MainWindow)
         self.actionNew_Preview_Window.setObjectName(u"actionNew_Preview_Window")
         self.actionSave_all = QAction(MainWindow)
@@ -135,17 +151,17 @@ class Ui_MainWindow(QMainWindow):
         self.menubar.addAction(self.menuWindow.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
         self.menuFile.addAction(self.actionNew)
-        self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionOpen)
-        self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionSave)
         self.menuFile.addAction(self.actionSave_as)
         self.menuFile.addSeparator()
-        self.menuFile.addAction(self.actionSave_all)
         self.menuFile.addSeparator()
+        self.menuFile.addAction(self.actionSave_all)
         self.menuFile.addAction(self.actionQuit)
         self.menuSettings.addAction(self.actionPreferences)
         self.menuHelp.addAction(self.actionAbout_Surf)
+        self.menuWindow.addAction(self.actionJoin)
+        self.menuWindow.addAction(self.actionHide_Preview)
         self.menuWindow.addAction(self.actionNew_Preview_Window)
         
         
@@ -155,10 +171,8 @@ class Ui_MainWindow(QMainWindow):
         self.splitWidget = QTabWidget(self.centralwidget)
         self.splitWidget.setObjectName(u"splitWidget")
         self.splitWidget.setSizePolicy(self.sizePolicy)
-        
         self.sizePolicy.setHeightForWidth(self.splitWidget.sizePolicy().hasHeightForWidth())
         self.splitWidget.setDocumentMode(True)
-        self.splitWidget.setTabBar(ClosableTabBar(self))
         self.splitTab1 = QWidget()
         self.splitTab1.setObjectName(u"splitTab1")
         self.sizePolicy.setHeightForWidth(self.splitTab1.sizePolicy().hasHeightForWidth())
@@ -171,7 +185,7 @@ class Ui_MainWindow(QMainWindow):
         self.textEdit_2.setSizePolicy(self.sizePolicy)
 
         self.verticalLayout_8.addWidget(self.textEdit_2)
-        #self.splitWidget.addTab(self.splitTab1, "")
+        self.splitWidget.addTab(self.splitTab1, "")
 
         self.editorWidget = QTabWidget(self.centralwidget)        
         self.editorWidget.setObjectName(u"editorWidget")
@@ -180,7 +194,6 @@ class Ui_MainWindow(QMainWindow):
         self.editorWidget.setElideMode(Qt.ElideLeft)
         self.editorWidget.setDocumentMode(True)
         self.editorWidget.setTabBarAutoHide(False)
-        self.editorWidget.setTabBar(ClosableTabBar(self))
         self.fileTab1 = QWidget()
         self.fileTab1.setObjectName(u"fileTab1")
         self.sizePolicy1.setHeightForWidth(self.fileTab1.sizePolicy().hasHeightForWidth())
@@ -415,18 +428,6 @@ class Ui_MainWindow(QMainWindow):
             QScrollBar {
             background-color: #333333;
             }
-            QLineEdit {
-            color: grey;            
-            }
-            QLineEdit:focus {
-            color: white;            
-            }
-            QPushButton:hover {
-              background-color: #4d2600;
-            }
-            QPushButton:pressed {
-              color: #ffd9b3;
-            }
             ''')
         files = Files()
         filepaths = files.get_files_list()
@@ -488,30 +489,26 @@ class Ui_MainWindow(QMainWindow):
         self.actionNew.triggered.connect(self.add_tab)
         self.actionOpen.triggered.connect(self.open_file)
         self.actionSave.triggered.connect(lambda: self.save_tab(self.editorWidget.currentIndex()))
-        # Setup Ctrl+S shortcut for saving the current tab
-        self.save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
-        self.save_shortcut.activated.connect(lambda: self.save_tab(self.editorWidget.currentIndex()))
         self.actionSave_as.triggered.connect(lambda: self.save_tab(self.editorWidget.currentIndex(), dialog=True))
         self.actionQuit.triggered.connect(sys.exit)
         #self.actionPreferences.triggered.connect()
         #self.actionAbout_Surf.triggered.connect()
+        #self.actionJoin.triggered.connect()
+        #self.actionHide_Preview.triggered.connect()
         #self.actionNew_Preview_Window.triggered.connect()
         self.actionSave_all.triggered.connect(self.save_all)
         #self.aiRefactorBtn.clicked.connect()
         #self.aiBugFixBtn.clicked.connect()
         #self.aiMetaDataBtn.clicked.connect()
         #self.aiTemplateBtn.clicked.connect()
-        self.skeletonBtn.clicked.connect(self.skeleton)
-        self.cssEditorBtn.clicked.connect(self.css_editor)
-        self.findReplaceBtn.clicked.connect(self.find_replace)
+        #self.skeletonBtn.clicked.connect()
+        #self.cssEditorBtn.clicked.connect()
+        #self.findReplaceBtn.clicked.connect()
         #self.externalDepsBtn.clicked.connect()
         #self.jsSandboxBtn.clicked.connect()
         #self.indentationBtn.clicked.connect()
         #self.gitBtn.clicked.connect()
         #self.flaskBtn.clicked.connect()
-        self.editorWidget.tabBar().tabBarClicked.connect(self.update_skeleton)
-        self.editorWidget.tabBar().tabCloseRequested.connect(lambda idx: self.remove_tab(idx, self.editorWidget, pop_from_list=True))
-        self.splitWidget.tabBar().tabCloseRequested.connect(lambda idx2: self.remove_tab(idx2, self.splitWidget))
                        
         self.splitWidget.setCurrentIndex(0)
         self.editorWidget.setCurrentIndex(0)
@@ -519,53 +516,9 @@ class Ui_MainWindow(QMainWindow):
         self.tabWidget_2.setCurrentIndex(0)
         self.surfBtn.setDefault(False)
 
+
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
-    
-    def update_skeleton(self):
-        try:            
-            editor_idx = self.editorWidget.currentIndex()
-            editor = self.editor_tabs[editor_idx]        
-            self.skele.update_tree_view(editor)
-        except AttributeError:
-            pass
-    
-    def skeleton(self):
-        editor_idx = self.editorWidget.currentIndex()
-        editor = self.editor_tabs[editor_idx]
-        self.skele = SkeletonTree(editor)        
-        # Create a new QWidget that will serve as the container for the layout
-        container_widget = QWidget()
-        # Create a layout
-        skele_layout = QHBoxLayout()
-        # Add the SkeletonTree widget to the layout
-        skele_layout.addWidget(self.skele)
-        container_widget.setLayout(skele_layout)
-        self.splitWidget.addTab(container_widget, 'Skeleton')
-
-    def closeTab(self, index, tab_widget):
-        tab_widget.removeTab(index)
-        self.editor_tabs.pop(index)
-
-    def css_editor(self):
-        try:            
-            current_tab_idx = self.editorWidget.currentIndex()
-            editor = self.editor_tabs[current_tab_idx]        
-            css_editor = CssEditor(self.splitWidget)
-            button = css_editor.get_button()
-            button.clicked.connect(lambda: css_editor.find_selector(editor))
-        except IndexError:
-            print('Cannot open CSS EDITOR, Open editor first')
-
-    def find_replace(self):
-        try:            
-            current_tab_idx = self.editorWidget.currentIndex()
-            editor = self.editor_tabs[current_tab_idx]
-            find_replace = FindReplaceWidget(editor)
-            self.splitWidget.addTab(find_replace, 'Find/Replace')
-        except IndexError:
-            print('Cannot open find/replace, Open editor first')
-        
 
     def update_browsers(self, filename):
         local_url = QUrl.fromLocalFile(filename)
@@ -594,13 +547,13 @@ class Ui_MainWindow(QMainWindow):
         self.setup_completer(self.textEdit, self)
         self.textEdit.cursorPositionChanged.connect(lambda: self.updateCompleterPosition(self.textEdit))        
     
-    def remove_tab(self, idx, editor, pop_from_list=False):
-        active_tab_name = self.editorWidget.tabText(idx)
-        editor.removeTab(idx)
-        if pop_from_list:
-            self.editor_tabs.pop(idx)
-            if active_tab_name in self.open_files.keys():
-                del self.open_files[active_tab_name]
+    def remove_tab(self):
+        active_tab_index = self.editorWidget.currentIndex()
+        active_tab_name = self.editorWidget.tabText(active_tab_index)
+        self.editorWidget.removeTab(active_tab_index)
+        self.editor_tabs.pop(active_tab_index)
+        if active_tab_name in self.open_files.keys():
+            del self.open_files[active_tab_name]
     
     def save_tab(self, idx, dialog=False):        
         active_tab_name = self.editorWidget.tabText(idx)
@@ -619,7 +572,6 @@ class Ui_MainWindow(QMainWindow):
             # Update the tab name with the filename extracted from the path
             new_tab_name = filename.split('/')[-1]
             self.editorWidget.setTabText(idx, new_tab_name)
-            self.editorWidget.tabBar().tabSizeHint(idx, len(new_tab_name))
             self.open_files[new_tab_name] = filename
         
     def save_all(self):
@@ -640,7 +592,6 @@ class Ui_MainWindow(QMainWindow):
                 self.editor_tabs[-1].insertPlainText(text)
             self.update_browsers(filename)
             self.editorWidget.setCurrentIndex(len(self.editor_tabs)-1)
-            self.editorWidget.tabBar().tabSizeHint(-1, len(tab_name))
     
     def toggle_surf(self):
         if self.surfMenu.isHidden():
@@ -657,6 +608,8 @@ class Ui_MainWindow(QMainWindow):
         self.actionQuit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
         self.actionPreferences.setText(QCoreApplication.translate("MainWindow", u"Preferences", None))
         self.actionAbout_Surf.setText(QCoreApplication.translate("MainWindow", u"About Surf", None))
+        self.actionJoin.setText(QCoreApplication.translate("MainWindow", u"Join", None))
+        self.actionHide_Preview.setText(QCoreApplication.translate("MainWindow", u"Hide Preview", None))
         self.actionNew_Preview_Window.setText(QCoreApplication.translate("MainWindow", u"New Preview Window", None))
         self.actionSave_all.setText(QCoreApplication.translate("MainWindow", u"Save all", None))
         self.splitWidget.setTabText(self.splitWidget.indexOf(self.splitTab1), QCoreApplication.translate("MainWindow", u"untitled", None))

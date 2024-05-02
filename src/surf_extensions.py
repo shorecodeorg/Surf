@@ -3,14 +3,17 @@
 #Sun Apr 28 06:40:48 PM +07 2024
 #surf_extensions.py
 
+import re
 import sys
 from surf_logging import set_logging
 from surf_filepaths import Files
 from PySide6.QtWidgets import (QApplication, QMainWindow, QPlainTextEdit,
         QWidget, QTextEdit, QCompleter, QHBoxLayout, QVBoxLayout, QMessageBox,
-        QLineEdit, QPushButton, QLabel, QTabWidget, QStyledItemDelegate, QTabBar)        
+        QLineEdit, QPushButton, QLabel, QTabWidget, QStyledItemDelegate, QTabBar,
+        QTreeView)        
 from PySide6.QtGui import (QSyntaxHighlighter, QTextCharFormat, QColor, QPainter,
-        QColor, QTextFormat, QTextCursor, QKeyEvent, QFont, QIcon)
+        QColor, QTextFormat, QTextCursor, QKeyEvent, QFont, QIcon,
+        QStandardItem, QStandardItemModel)
 from PySide6.QtCore import (QRegularExpression, Qt, QStringListModel,
         QTextStream, QFile, QRect)
 
@@ -453,19 +456,12 @@ class SyntaxVocabulary:
             'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'Promise', 'Map',
             'Set', 'WeakMap', 'WeakSet', 'Symbol', 'BigInt', 'ArrayBuffer',
             'SharedArrayBuffer', 'DataView', 'TypedArray', 'Proxy', 'Reflect', 'eval',
-            'arguments', 'template literals', 'destructuring assignment',
-            'spread operator', 'rest parameters', 'arrow functions', 'default parameters',
-            'for...of', 'for...in', 'getter', 'setter', 'static', 'private field', '#',
-            'public field', 'optional chaining', '?.', 'nullish coalescing operator', '??',
-            'logical assignment operators', 'bitwise operators', 'template tags',
-            'dynamic import', 'BigInt literals', 'lookbehind assertion in RegExp',
-            'named capture groups in RegExp', 'Unicode property escapes in RegExp',
-            's (dotAll) flag for RegExp', 'private methods in classes',
-            'static blocks in classes', 'logical nullish assignment (??=)',
-            'numeric separators', 'top-level await', 'import.meta', 'WeakRef',
+            'arguments',
+            'for...of', 'for...in', 'getter', 'setter', 'static',       
+            'import.meta', 'WeakRef',
             'FinalizationRegistry', 'var', 'let', 'const', 'if', 'else', 'for', 'while',
             'do', 'function', 'return', 'break', 'continue', 'try', 'catch', 'finally',
-            'throw', 'class', 'await', 'async', 'console.log', 'document.querySelector',
+            'throw', 'class', 'await', 'async', 'console.log', 'document', 'querySelector',
             'fetch', 'Array', 'String', 'Object', 'Number', 'Boolean', 'null', 'undefined',
             'new', 'this', 'super', 'import', 'export'
         ]
@@ -558,3 +554,40 @@ class ClosableTabBar(QTabBar):
                 # Emit the tabCloseRequested signal
                 self.tabCloseRequested.emit(index)  
                 break
+
+class SkeletonTree(QTreeView):
+    def __init__(self, editor):
+        super().__init__()
+        self.setEditTriggers(QTreeView.NoEditTriggers)  # Make items not editable
+        self.clicked.connect(self.on_item_clicked)
+    
+        # Model for tree view
+        self.model = QStandardItemModel()
+        self.setModel(self.model)
+        self.update_tree_view(editor)
+
+    def update_tree_view(self, editor):
+        self.editor = editor
+        text = editor.toPlainText()
+        # Filter text: remove anything inside curly braces
+        filtered_text = re.sub(r'\{[^}]*\}', '', text)
+        words = filtered_text.split()
+    
+        # Update tree view
+        self.model.clear()
+        for word in words:
+            item = QStandardItem(word)
+            self.model.appendRow(item)
+    
+    def on_item_clicked(self, index):
+        item = self.model.itemFromIndex(index)
+        word = item.text()
+        # Find the word in the text editor and select it
+        text = self.editor.toPlainText()
+        start_index = text.find(word)
+        if start_index != -1:
+            self.editor.setFocus()
+            cursor = self.editor.textCursor()
+            cursor.setPosition(start_index, QTextCursor.MoveAnchor)
+            cursor.setPosition(start_index + len(word), QTextCursor.KeepAnchor)
+            self.editor.setTextCursor(cursor)
