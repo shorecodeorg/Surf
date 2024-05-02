@@ -596,6 +596,7 @@ class Ui_MainWindow(QMainWindow):
             # Update the tab name with the filename extracted from the path
             new_tab_name = filename.split('/')[-1]
             self.editorWidget.setTabText(idx, new_tab_name)
+            self.editorWidget.tabBar().tabSizeHint(idx, len(new_tab_name))
             self.open_files[new_tab_name] = filename
         
     def save_all(self):
@@ -616,6 +617,7 @@ class Ui_MainWindow(QMainWindow):
                 self.editor_tabs[-1].insertPlainText(text)
             self.update_browsers(filename)
             self.editorWidget.setCurrentIndex(len(self.editor_tabs)-1)
+            self.editorWidget.tabBar().tabSizeHint(-1, len(tab_name))
     
     def toggle_surf(self):
         if self.surfMenu.isHidden():
