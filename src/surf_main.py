@@ -86,8 +86,7 @@ class Ui_MainWindow(QMainWindow):
             top = cr.top()
             bottom = cr.bottom()
             cr.setTop(top+10)
-            cr.setBottom(bottom+10)
-    
+            cr.setBottom(bottom+10)    
             # Dynamically adjust the width of the completer popup
             popup = self.completer.popup()
             maxItemWidth = max(popup.fontMetrics().horizontalAdvance(item) for item in matches_list) + 25  # Adding a small padding

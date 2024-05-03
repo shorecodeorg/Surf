@@ -329,7 +329,6 @@ class FindReplaceWidget(QWidget):
         else:
             QMessageBox.information(self, "Replace", f"Cannot find '{text}'")
 
-        
 class CustomCompleter(QCompleter):
     def __init__(self, vocabulary, text_editor, parent=None):
         super(CustomCompleter, self).__init__(vocabulary, parent)
@@ -341,28 +340,72 @@ class CustomCompleter(QCompleter):
         self.activated.connect(lambda completion: self.insertCompletion(completion, text_editor))
         files = Files()
         filepaths = files.get_files_list()
-        self.logger = set_logging('surf2', filepaths[0])        
-        
+        self.logger = set_logging('surf2', filepaths[0])
+        self.editor.textChanged.connect(self.onTextChanged)
+
+    def onTextChanged(self):
+        cursor_pos = self.editor.textCursor().position()
+        text_up_to_cursor = self.editor.toPlainText()[:cursor_pos]
+        last_word = text_up_to_cursor.split(' ')[-1]  # Adjust if you need to split by other characters
+        if '.' in last_word:
+            self.setCompletionPrefix(last_word.split('.')[-1])
+        if '(' in last_word:
+            self.setCompletionPrefix(last_word.split('(')[-1])
+        if '\n' in last_word:
+            self.setCompletionPrefix(last_word.split('\n')[-1])
+        else:
+            self.setCompletionPrefix(last_word)
+            # Only update the completion prefix if the last character is not a space
+            if not text_up_to_cursor.endswith(' '):
+                self.popup().show()
+            else:
+                self.popup().hide()        
+
     def eventFilter(self, obj, event):
         if event.type() == QKeyEvent.Type.KeyPress:
             if event.key() == Qt.Key.Key_Tab.numerator and self.popup().isVisible():
-                self.insertCompletion(self.currentCompletion(), self.editor)
+                self.insertCompletion(self.popup().currentIndex().data(), self.editor)
                 return True
         return super(CustomCompleter, self).eventFilter(obj, event)
     
     def insertCompletion(self, completion, text_editor):
         try:
-            
             tc = text_editor.textCursor()
-            extra = len(completion) - len(self.completionPrefix())
-            tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
-            tc.insertText(completion[-extra:])
+            full_text = text_editor.toPlainText()
+            cursor_pos = tc.position()
+            
+            # Find the text from the start to the cursor position
+            text_to_cursor = full_text[:cursor_pos]
+            
+            # Find the last occurrence of '.' before the cursor position
+            dot_pos = text_to_cursor.rfind('.')
+            
+            if dot_pos != -1:
+                # Calculate how much text to replace after the dot
+                extra = len(completion) - len(self.completionPrefix())
+                tc.setPosition(dot_pos + 1, QTextCursor.MoveAnchor)
+                tc.movePosition(QTextCursor.MoveOperation.EndOfWord, QTextCursor.KeepAnchor)
+                tc.insertText(completion[-extra:])
+            else:
+                # No dot found, fallback to default behavior
+                extra = len(completion) - len(self.completionPrefix())
+                tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
+                tc.insertText(completion[-extra:])
+                
             text_editor.setTextCursor(tc)
-
         except AttributeError as e:
             self.logger.info(e)
             sys.exit()
 
+    def splitPath(self, path):
+        # Override splitPath to handle dot notation
+        if '.' in path:
+            return path.split('.')[-1]
+        return path
+
+    def pathFromIndex(self, index):
+        # Override pathFromIndex to ensure the completer works with dot notation
+        return super(CustomCompleter, self).pathFromIndex(index)    
 
 class CssEditor(CodeEditor):
     def __init__(self, parent):
