@@ -10,7 +10,7 @@ from surf_filepaths import Files
 from PySide6.QtWidgets import (QApplication, QMainWindow, QPlainTextEdit,
         QWidget, QTextEdit, QCompleter, QHBoxLayout, QVBoxLayout, QMessageBox,
         QLineEdit, QPushButton, QLabel, QTabWidget, QStyledItemDelegate, QTabBar,
-        QTreeView)        
+        QTreeView, QSplitter)        
 from PySide6.QtGui import (QSyntaxHighlighter, QTextCharFormat, QColor, QPainter,
         QColor, QTextFormat, QTextCursor, QKeyEvent, QFont, QIcon,
         QStandardItem, QStandardItemModel)
@@ -736,33 +736,50 @@ class SkeletonTree(QTreeView):
             self.last_clicked_item = None  # Reset if a different item is clicked
                                    
 class Bridge(QObject):
+    def __init__(self, output_console):
+        super().__init__()
+        self.output_console = output_console
+
     @Slot(str)
     def log(self, message):
-        # This method will receive console.log messages from JavaScript
-        print("From JS:", message)
+        # This method will now append messages to the output console
+        self.output_console.append("> " + message)
+
+class OutputConsole(QTextEdit):
+    pass
 
 class JsSandbox(QWidget):
     def __init__(self, html_editor):
         super().__init__()
         self.layout = QVBoxLayout(self)
+        self.horizSplit = QSplitter(Qt.Vertical)
 
         # Plain text editor for HTML content
         self.editor = CodeEditor()
-        self.layout.addWidget(self.editor)
-
+        self.horizSplit.addWidget(self.editor)
+        
+        # Output console for displaying messages from JavaScript
+        self.output_console = OutputConsole()
+        self.output_console.setReadOnly(True)  # Make the output console read-only
+        self.horizSplit.addWidget(self.output_console)
+        
         # WebEngineView for running JavaScript
         self.view = QWebEngineView()
         self.channel = QWebChannel()
-        self.bridge = Bridge()
+        self.bridge = Bridge(self.output_console)
         self.channel.registerObject('bridge', self.bridge)
         self.view.page().setWebChannel(self.channel)
         self.html_editor = html_editor
         
-        self.view.setHtml(self.add_qbridge_html())
-        # Button or other mechanism to run JS code accessing the HTML content can be added here
+        self.view.setHtml(self.add_qbridge_html(init_text='''
+bridge.log('Hello from Shorecode');
+bridge.log('Your javascript debug will be displayed here');
+bridge.log('Enter some javascript in the js sandbox editor, \
+then hit run javascript to execute the sandbox code vs the code in the active Surf editor');'''))
         # Button to run JS code
         self.run_button = QPushButton("Run JavaScript")
         self.run_button.clicked.connect(self.run_javascript)
+        self.layout.addWidget(self.horizSplit)  
         self.layout.addWidget(self.run_button)        
 
     def get_view(self):
@@ -770,7 +787,7 @@ class JsSandbox(QWidget):
 
     def run_javascript(self):
         # Example method to run JavaScript code and access the HTML content from the editor
-        self.view.setHtml(self.html_editor.toPlainText())
+        self.view.setHtml(self.add_qbridge_html())
         js_code = self.editor.toPlainText()
         self.view.page().runJavaScript(js_code)
         self.update_js_sandbox()
@@ -780,8 +797,12 @@ class JsSandbox(QWidget):
             self.html_editor = editor
         self.view.setHtml(self.add_qbridge_html())
         
-    def add_qbridge_html(self):
-        qbridge_html = '''```html
+    def add_qbridge_html(self, init_text=None):
+        introduction = ''
+        if init_text:
+            introduction = init_text
+        print(introduction)
+        qbridge_html = '''
         <!DOCTYPE html>
         <html>
         <head>
@@ -789,10 +810,8 @@ class JsSandbox(QWidget):
             <script type="text/javascript">
                 new QWebChannel(qt.webChannelTransport, function(channel) {
                     // Now the bridge object is available as channel.objects.bridge
-                    window.bridge = channel.objects.bridge;
-        
-                    // Example usage
-                    bridge.log('Hello from JavaScript');
+                    window.bridge = channel.objects.bridge;        
+                    ''' + f'{introduction}' + '''                 
                 });
             </script>       
         '''        

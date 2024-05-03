@@ -426,6 +426,15 @@ class Ui_MainWindow(QMainWindow):
             QPushButton:pressed {
               color: #ffd9b3;
             }
+            OutputConsole {
+              background-color: #001a1a;
+              font-family: 'Courier New', monospace;
+              font-size: 10px;
+            }
+            CodeEditor {
+              font-family: 'Courier New', monospace;
+              font-size: 13px;
+            }
             ''')
         files = Files()
         filepaths = files.get_files_list()
