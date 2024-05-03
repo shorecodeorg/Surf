@@ -537,8 +537,11 @@ class Ui_MainWindow(QMainWindow):
         container_widget = QWidget()
         # Create a layout
         skele_layout = QHBoxLayout()
-        # Add the SkeletonTree widget to the layout
+        # Add the SkeletonTree widget to the layout        
         skele_layout.addWidget(self.skele)
+        updateButton = QPushButton("Update Tree View")
+        skele_layout.addWidget(updateButton)
+        self.updateButton.clicked.connect(self.skele.update_tree_view)        
         container_widget.setLayout(skele_layout)
         self.splitWidget.addTab(container_widget, 'Skeleton')
 
