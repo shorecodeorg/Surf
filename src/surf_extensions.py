@@ -665,7 +665,7 @@ class SkeletonTree(QTreeView):
                 continue
     
             # Detect <script> tag to adjust nesting logic
-            if '<script>' in item_text and '</script>' not in item_text:
+            if '<script' in item_text and '</script>' not in item_text:
                 print('here')
                 print(last_item_at_level)
                 inside_script_tag = True
@@ -734,7 +734,7 @@ class SkeletonTree(QTreeView):
                 self.last_found_position = -1  # Reset for the current item
                 self.on_item_clicked(index)  # Retry to find from the beginning
             self.last_clicked_item = None  # Reset if a different item is clicked
-            
+                                   
 class Bridge(QObject):
     @Slot(str)
     def log(self, message):
@@ -757,8 +757,13 @@ class JsSandbox(QWidget):
         self.channel.registerObject('bridge', self.bridge)
         self.view.page().setWebChannel(self.channel)
         self.html_editor = html_editor
-        self.view.setHtml(html_editor.toPlainText())
+        
+        self.view.setHtml(self.add_qbridge_html())
         # Button or other mechanism to run JS code accessing the HTML content can be added here
+        # Button to run JS code
+        self.run_button = QPushButton("Run JavaScript")
+        self.run_button.clicked.connect(self.run_javascript)
+        self.layout.addWidget(self.run_button)        
 
     def get_view(self):
         return self.view
@@ -768,6 +773,32 @@ class JsSandbox(QWidget):
         self.view.setHtml(self.html_editor.toPlainText())
         js_code = self.editor.toPlainText()
         self.view.page().runJavaScript(js_code)
+        self.update_js_sandbox()
     
-    def update_js_sandbox(self, editor):
-        self.html_editor = editor
+    def update_js_sandbox(self, editor=None):
+        if editor != None:            
+            self.html_editor = editor
+        self.view.setHtml(self.add_qbridge_html())
+        
+    def add_qbridge_html(self):
+        qbridge_html = '''```html
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <script type="text/javascript" src="qrc:///qtwebchannel/qwebchannel.js"></script>
+            <script type="text/javascript">
+                new QWebChannel(qt.webChannelTransport, function(channel) {
+                    // Now the bridge object is available as channel.objects.bridge
+                    window.bridge = channel.objects.bridge;
+        
+                    // Example usage
+                    bridge.log('Hello from JavaScript');
+                });
+            </script>       
+        '''        
+        editor_html = self.html_editor.toPlainText()
+        html_injection = editor_html[editor_html.find('<head>') + len('<head>'):]
+        if html_injection == -1:
+            html_injection = editor_html[editor_html.find('<body>'):]
+            html_injection = '</head>\n' + html_injection
+        return qbridge_html + html_injection

@@ -508,7 +508,7 @@ class Ui_MainWindow(QMainWindow):
         #self.indentationBtn.clicked.connect()
         #self.gitBtn.clicked.connect()
         #self.flaskBtn.clicked.connect()
-        self.editorWidget.tabBar().tabBarClicked.connect(self.update_skeleton)
+        self.editorWidget.tabBar().tabBarClicked.connect(self.update_extensions)
         self.editorWidget.tabBar().tabCloseRequested.connect(lambda idx: self.remove_tab(idx, self.editorWidget, pop_from_list=True))
         self.splitWidget.tabBar().tabCloseRequested.connect(lambda idx2: self.remove_tab(idx2, self.splitWidget))
                        
@@ -521,30 +521,34 @@ class Ui_MainWindow(QMainWindow):
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
     
+    def update_extensions(self, i):
+        self.update_js_sandbox(i)
+        self.update_skeleton(i)
+    
     def js_sandbox(self):
         editor_idx = self.editorWidget.currentIndex()
         editor = self.editor_tabs[editor_idx]        
         sandbox = JsSandbox(editor)
-        updateButton = QPushButton("Run JS")
-        sandbox.layout.addWidget(updateButton)
-        updateButton.clicked.connect(sandbox.run_javascript)
         web_view = sandbox.get_view()
         self.splitWidget.addTab(sandbox, 'JS Sandbox')
         self.tabWidget.addTab(web_view, 'JS Sandbox')
         self.sandbox = sandbox
     
-    def update_js_sandbox(self):
+    def update_js_sandbox(self, i):
         try:            
-            editor_idx = self.editorWidget.currentIndex()
-            editor = self.editor_tabs[editor_idx]        
+            editor = self.editor_tabs[i]        
             self.sandbox.update_js_sandbox(editor)
         except AttributeError:
-            pass    
+            pass
     
-    def update_skeleton(self):
+    def match_editor_idxs(self):
+        matching_editors = self.editor_tabs[1:][::-1]
+        matching_editors.append(self.editor_tabs[0])    
+        return matching_editors
+    
+    def update_skeleton(self, i):
         try:            
-            editor_idx = self.editorWidget.currentIndex()
-            editor = self.editor_tabs[editor_idx]        
+            editor = self.editor_tabs[i]        
             self.skele.update_tree_view(editor)
         except AttributeError:
             pass
@@ -599,6 +603,7 @@ class Ui_MainWindow(QMainWindow):
         self.new_tab('untitled')
 
     def new_tab(self, tab_name):
+        print(help(self.editorWidget.addTab))
         new_widget = QWidget(self.editorWidget)
         new_edit = CodeEditor(new_widget)       
         self.sizePolicy.setHeightForWidth(new_widget.sizePolicy().hasHeightForWidth())
@@ -662,6 +667,7 @@ class Ui_MainWindow(QMainWindow):
                 self.editor_tabs[-1].insertPlainText(text)
             self.update_browsers(filename)
             self.editorWidget.setCurrentIndex(len(self.editor_tabs)-1)
+            self.update_extensions(len(self.editor_tabs)-1)
             self.editorWidget.tabBar().tabSizeHint(-1, len(tab_name))
     
     def toggle_surf(self):
