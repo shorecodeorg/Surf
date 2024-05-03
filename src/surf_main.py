@@ -21,7 +21,8 @@ from surf_filepaths import Files
 from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor, CssEditor, 
                               CustomCompleter, FindReplaceWidget,
                               SyntaxVocabulary, ClosableTabBar,
-                              SkeletonTree, JsSandbox)
+                              SkeletonTree, JsSandbox, ConsoleWidget,
+                              ConsoleEnabledPage)
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect, QStringListModel, QTimer, 
     QSize, QTime, QUrl, Qt, QEvent)
@@ -30,6 +31,7 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient, QKeyEvent, 
     QPainter, QPalette, QPixmap, QRadialGradient, QKeySequence, 
     QTransform, QTextCursor, QMouseEvent, QShortcut)
+from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QMainWindow,
     QMenu, QMenuBar, QPushButton, QSizePolicy, QCompleter, 
@@ -268,6 +270,8 @@ class Ui_MainWindow(QMainWindow):
         self.browserLayout1080 = QVBoxLayout()
         self.browserLayout1080.setObjectName(u"browserLayout1080")
         self.browser1080 = QWebEngineView(self.preview1080p)
+        self.consoleEnabledPage = ConsoleEnabledPage()
+        self.browser1080.setPage(self.consoleEnabledPage)
         self.browser1080.setObjectName(u"browser1080")
         self.browser1080.setStyleSheet(u"")
         self.browser1080.setUrl(QUrl(u"about:blank"))
@@ -288,12 +292,13 @@ class Ui_MainWindow(QMainWindow):
         self.consoleTab.setObjectName(u"consoleTab")
         self.verticalLayout_6 = QVBoxLayout(self.consoleTab)
         self.verticalLayout_6.setObjectName(u"verticalLayout_6")
-        self.widget = QWidget(self.consoleTab)
-        self.widget.setObjectName(u"widget")
+        # Initialize the console widget
+        self.console = ConsoleWidget(self.consoleTab)        
 
-        self.verticalLayout_6.addWidget(self.widget)
+        self.verticalLayout_6.addWidget(self.console)
 
         self.tabWidget.addTab(self.consoleTab, "")
+        
         self.networkTab = QWidget()
         self.networkTab.setObjectName(u"networkTab")
         self.verticalLayout_7 = QVBoxLayout(self.networkTab)
@@ -520,6 +525,7 @@ class Ui_MainWindow(QMainWindow):
         self.editorWidget.tabBar().tabBarClicked.connect(self.update_extensions)
         self.editorWidget.tabBar().tabCloseRequested.connect(lambda idx: self.remove_tab(idx, self.editorWidget, pop_from_list=True))
         self.splitWidget.tabBar().tabCloseRequested.connect(lambda idx2: self.remove_tab(idx2, self.splitWidget))
+        self.consoleEnabledPage.newData.connect(self.console.log_message)
                        
         self.splitWidget.setCurrentIndex(0)
         self.editorWidget.setCurrentIndex(0)
@@ -533,6 +539,10 @@ class Ui_MainWindow(QMainWindow):
     def update_extensions(self, i):
         self.update_js_sandbox(i)
         self.update_skeleton(i)
+        try:            
+            self.update_browsers(self.editor_tabs[i])
+        except TypeError:
+            pass
     
     def js_sandbox(self):
         editor_idx = self.editorWidget.currentIndex()
@@ -612,7 +622,6 @@ class Ui_MainWindow(QMainWindow):
         self.new_tab('untitled')
 
     def new_tab(self, tab_name):
-        print(help(self.editorWidget.addTab))
         new_widget = QWidget(self.editorWidget)
         new_edit = CodeEditor(new_widget)       
         self.sizePolicy.setHeightForWidth(new_widget.sizePolicy().hasHeightForWidth())

@@ -5,6 +5,7 @@
 
 import re
 import sys
+from datetime import datetime
 from surf_logging import set_logging
 from surf_filepaths import Files
 from PySide6.QtWidgets import (QApplication, QMainWindow, QPlainTextEdit,
@@ -15,9 +16,10 @@ from PySide6.QtGui import (QSyntaxHighlighter, QTextCharFormat, QColor, QPainter
         QColor, QTextFormat, QTextCursor, QKeyEvent, QFont, QIcon,
         QStandardItem, QStandardItemModel)
 from PySide6.QtCore import (QRegularExpression, Qt, QStringListModel,
-        QTextStream, QFile, QRect, QObject, Slot)
+        QTextStream, QFile, QRect, QObject, Slot, Signal)
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWebEngineCore import  QWebEnginePage
 
 class CustomDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
@@ -366,7 +368,6 @@ class CustomCompleter(QCompleter):
     def eventFilter(self, obj, event):
         if event.type() == QKeyEvent.Type.KeyPress:
             if event.key() == Qt.Key.Key_Tab.numerator and self.popup().isVisible():
-                print(dir(self.popup()))
                 if self.popup().currentIndex().data():                    
                     self.insertCompletion(self.popup().currentIndex().data(), self.editor)
                 else:
@@ -651,7 +652,6 @@ class SkeletonTree(QTreeView):
         script_indentation_level = None
         inside_script_tag = False
         js_item = None
-        print(last_item_at_level)
         for line in text.splitlines():
             indentation_level = len(line) - len(line.lstrip(' '))          
             level = indentation_level // 4
@@ -661,13 +661,10 @@ class SkeletonTree(QTreeView):
                 if js_item:
                     for i in range(8):
                         last_item_at_level[i] = js_item
-                print(last_item_at_level)
                 continue
     
             # Detect <script> tag to adjust nesting logic
             if '<script' in item_text and '</script>' not in item_text:
-                print('here')
-                print(last_item_at_level)
                 inside_script_tag = True
                 script_indentation_level = 0
                 item = QStandardItem(item_text)
@@ -767,14 +764,15 @@ class JsSandbox(QWidget):
         self.view = QWebEngineView()
         self.channel = QWebChannel()
         self.bridge = Bridge(self.output_console)
-        self.channel.registerObject('bridge', self.bridge)
+        self.channel.registerObject('surf', self.bridge)
         self.view.page().setWebChannel(self.channel)
         self.html_editor = html_editor
         
         self.view.setHtml(self.add_qbridge_html(init_text='''
-bridge.log('Hello from Shorecode');
-bridge.log('Your javascript debug will be displayed here');
-bridge.log('Enter some javascript in the js sandbox editor, \
+surf.log('Hello from Shorecode');
+surf.log('Your javascript debug will be displayed here,');
+surf..og('use surf.log() like you would console.log()');
+surf.log('Enter some javascript in the js sandbox editor, \
 then hit run javascript to execute the sandbox code vs the code in the active Surf editor');'''))
         # Button to run JS code
         self.run_button = QPushButton("Run JavaScript")
@@ -801,7 +799,6 @@ then hit run javascript to execute the sandbox code vs the code in the active Su
         introduction = ''
         if init_text:
             introduction = init_text
-        print(introduction)
         qbridge_html = '''
         <!DOCTYPE html>
         <html>
@@ -809,8 +806,8 @@ then hit run javascript to execute the sandbox code vs the code in the active Su
             <script type="text/javascript" src="qrc:///qtwebchannel/qwebchannel.js"></script>
             <script type="text/javascript">
                 new QWebChannel(qt.webChannelTransport, function(channel) {
-                    // Now the bridge object is available as channel.objects.bridge
-                    window.bridge = channel.objects.bridge;        
+                    // Now the bridge object is available as channel.objects.surf
+                    window.surf = channel.objects.surf;        
                     ''' + f'{introduction}' + '''                 
                 });
             </script>       
@@ -821,3 +818,23 @@ then hit run javascript to execute the sandbox code vs the code in the active Su
             html_injection = editor_html[editor_html.find('<body>'):]
             html_injection = '</head>\n' + html_injection
         return qbridge_html + html_injection
+    
+class ConsoleWidget(QPlainTextEdit):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setReadOnly(True)
+    
+    @Slot(str)
+    def log_message(self, messages):
+        for message in messages:
+            self.appendPlainText(message)
+
+class ConsoleEnabledPage(QWebEnginePage):
+    newData = Signal(list)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
+        l = message.split(",")
+        l[0] = f'Line {lineNumber} > ' + l[0]
+        self.newData.emit(l)  # Emit the signal with the list
