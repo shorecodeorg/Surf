@@ -341,30 +341,34 @@ class CustomCompleter(QCompleter):
         files = Files()
         filepaths = files.get_files_list()
         self.logger = set_logging('surf2', filepaths[0])
-        self.editor.textChanged.connect(self.onTextChanged)
+        #self.editor.textChanged.connect(self.onTextChanged)
 
-    def onTextChanged(self):
-        cursor_pos = self.editor.textCursor().position()
-        text_up_to_cursor = self.editor.toPlainText()[:cursor_pos]
-        last_word = text_up_to_cursor.split(' ')[-1]  # Adjust if you need to split by other characters
-        if '.' in last_word:
-            self.setCompletionPrefix(last_word.split('.')[-1])
-        if '(' in last_word:
-            self.setCompletionPrefix(last_word.split('(')[-1])
-        if '\n' in last_word:
-            self.setCompletionPrefix(last_word.split('\n')[-1])
-        else:
-            self.setCompletionPrefix(last_word)
-            # Only update the completion prefix if the last character is not a space
-            if not text_up_to_cursor.endswith(' '):
-                self.popup().show()
-            else:
-                self.popup().hide()        
+    #def onTextChanged(self):
+        #cursor_pos = self.editor.textCursor().position()
+        #text_up_to_cursor = self.editor.toPlainText()[:cursor_pos]
+        #last_word = text_up_to_cursor.split(' ')[-1]  # Adjust if you need to split by other characters
+        #if '.' in last_word:
+            #self.setCompletionPrefix(last_word.split('.')[-1])
+        #if '(' in last_word:
+            #self.setCompletionPrefix(last_word.split('(')[-1])
+        #if '\n' in last_word:
+            #self.setCompletionPrefix(last_word.split('\n')[-1])
+        #else:
+            #self.setCompletionPrefix(last_word)
+            ## Only update the completion prefix if the last character is not a space
+            #if not text_up_to_cursor.endswith(' '):
+                #self.popup().show()
+            #else:
+                #self.popup().hide()        
 
     def eventFilter(self, obj, event):
         if event.type() == QKeyEvent.Type.KeyPress:
             if event.key() == Qt.Key.Key_Tab.numerator and self.popup().isVisible():
-                self.insertCompletion(self.popup().currentIndex().data(), self.editor)
+                print(dir(self.popup()))
+                if self.popup().currentIndex().data():                    
+                    self.insertCompletion(self.popup().currentIndex().data(), self.editor)
+                else:
+                    self.insertCompletion(self.currentCompletion(), self.editor)
                 return True
         return super(CustomCompleter, self).eventFilter(obj, event)
     
@@ -382,7 +386,7 @@ class CustomCompleter(QCompleter):
             
             if dot_pos != -1:
                 # Calculate how much text to replace after the dot
-                extra = len(completion) - len(self.completionPrefix())
+                ##extra = len(completion) - len(self.completionPrefix())
                 tc.setPosition(dot_pos + 1, QTextCursor.MoveAnchor)
                 tc.movePosition(QTextCursor.MoveOperation.EndOfWord, QTextCursor.KeepAnchor)
                 tc.insertText(completion[-extra:])
@@ -397,15 +401,15 @@ class CustomCompleter(QCompleter):
             self.logger.info(e)
             sys.exit()
 
-    def splitPath(self, path):
-        # Override splitPath to handle dot notation
-        if '.' in path:
-            return path.split('.')[-1]
-        return path
+    #def splitPath(self, path):
+        ## Override splitPath to handle dot notation
+        #if '.' in path:
+            #return path.split('.')[-1]
+        #return path
 
-    def pathFromIndex(self, index):
-        # Override pathFromIndex to ensure the completer works with dot notation
-        return super(CustomCompleter, self).pathFromIndex(index)    
+    #def pathFromIndex(self, index):
+        ## Override pathFromIndex to ensure the completer works with dot notation
+        #return super(CustomCompleter, self).pathFromIndex(index)    
 
 class CssEditor(CodeEditor):
     def __init__(self, parent):
@@ -601,36 +605,130 @@ class ClosableTabBar(QTabBar):
 class SkeletonTree(QTreeView):
     def __init__(self, editor):
         super().__init__()
-        self.setEditTriggers(QTreeView.NoEditTriggers)  # Make items not editable
+        self.setEditTriggers(QTreeView.NoEditTriggers)
         self.clicked.connect(self.on_item_clicked)
-    
-        # Model for tree view
+
         self.model = QStandardItemModel()
         self.setModel(self.model)
         self.update_tree_view(editor)
 
+        # Attributes to track the last clicked item and its last found position
+        self.last_clicked_item = None
+        self.last_found_position = -1
+        
+    def filter_content(self, preserved_text):
+        # Remove multiline comments from <script> content
+        def clean_script_content(match):
+            # Remove multiline comments within script tags
+            script_content = re.sub(r'/\*[\s\S]*?\*/', '', match.group(0))
+            return script_content
+
+        # Apply cleaning function to <script> tags
+        preserved_text = re.sub(r'<script[\s\S]*?</script>', clean_script_content, preserved_text)
+
+        # Apply existing simplification rules outside of <script> tags
+        filtered_text = re.sub(r'(\{[^}]*\})', lambda m: '{ }' if m.group(1).strip() != '{}' else '{}', preserved_text)
+        filtered_text = re.sub(r'(function\s+\w+\s*\([^)]*\)\s*\{)\s*[^}]*', r'\1}', filtered_text)
+        filtered_text = re.sub(r'</(img|br|hr|input|meta|link|area|base|col|command|embed|keygen|param|source|track|wbr)>', '', filtered_text)
+        filtered_text = re.sub(r'</\w+>', '', filtered_text)
+        filtered_text = re.sub(r'/\*[\s\S]*?\*/', '', filtered_text)
+        filtered_text = re.sub(r'\{\s*\}', '', filtered_text)
+        filtered_text = re.sub(r'\[\s*\]', '', filtered_text)
+        filtered_text = re.sub(r'\(\s*\)', '', filtered_text)
+
+        return filtered_text
+
     def update_tree_view(self, editor):
         self.editor = editor
         text = editor.toPlainText()
-        # Filter text: remove anything inside curly braces
-        filtered_text = re.sub(r'\{[^}]*\}', '', text)
-        words = filtered_text.split()
+        text = self.filter_content(text)
     
-        # Update tree view
         self.model.clear()
-        for word in words:
-            item = QStandardItem(word)
-            self.model.appendRow(item)
+        last_item_at_level = {0: self.model.invisibleRootItem()}
     
+        script_indentation_level = None
+        inside_script_tag = False
+        js_item = None
+        print(last_item_at_level)
+        for line in text.splitlines():
+            indentation_level = len(line) - len(line.lstrip(' '))          
+            level = indentation_level // 4
+    
+            item_text = line.strip()
+            if not item_text:
+                if js_item:
+                    for i in range(8):
+                        last_item_at_level[i] = js_item
+                print(last_item_at_level)
+                continue
+    
+            # Detect <script> tag to adjust nesting logic
+            if '<script>' in item_text and '</script>' not in item_text:
+                print('here')
+                print(last_item_at_level)
+                inside_script_tag = True
+                script_indentation_level = 0
+                item = QStandardItem(item_text)
+                js_item = item
+                parent_item = last_item_at_level.get(level-1, self.model.invisibleRootItem())
+                parent_item.appendRow(item)
+                for i in range(5):                    
+                    last_item_at_level[i] = item  # Adjust the level for children of <script>                    
+                continue
+            elif '</script>' in item_text:
+                inside_script_tag = False
+                script_indentation_level = None
+                continue  # Skip adding </script> tag to the tree
+    
+            if inside_script_tag:
+                # Adjust level for items inside script tag based on their indentation relative to the script tag
+                adjusted_level = level
+                if level == 0:
+                    level = 1
+                item = QStandardItem(item_text)
+                parent_item = last_item_at_level.get(adjusted_level - 1, self.model.invisibleRootItem())
+                parent_item.appendRow(item)
+                for i in range(3):
+                    last_item_at_level[adjusted_level+i] = item
+            else:
+                adjusted_level = level
+                item = QStandardItem(item_text)
+                parent_item = last_item_at_level.get(adjusted_level - 1, self.model.invisibleRootItem())
+                parent_item.appendRow(item)
+                last_item_at_level[adjusted_level] = item                
+    
+            # Clean up deeper levels from the tracking dict
+            keys_to_delete = [key for key in last_item_at_level if key > adjusted_level]
+            for key in keys_to_delete:
+                del last_item_at_level[key]
+                
     def on_item_clicked(self, index):
         item = self.model.itemFromIndex(index)
         word = item.text()
-        # Find the word in the text editor and select it
         text = self.editor.toPlainText()
-        start_index = text.find(word)
+
+        # Check if the same item is clicked again
+        if item == self.last_clicked_item:
+            start_search_position = self.last_found_position + len(word)
+        else:
+            start_search_position = 0
+
+        # Find the next matching item starting from the last found position + length of word
+        start_index = text.find(word, start_search_position)
+
         if start_index != -1:
             self.editor.setFocus()
             cursor = self.editor.textCursor()
             cursor.setPosition(start_index, QTextCursor.MoveAnchor)
             cursor.setPosition(start_index + len(word), QTextCursor.KeepAnchor)
             self.editor.setTextCursor(cursor)
+
+            # Update the last clicked item and its last found position
+            self.last_clicked_item = item
+            self.last_found_position = start_index
+        else:
+            # If no more matches are found, reset the search for this item
+            if self.last_clicked_item == item:
+                self.last_found_position = -1  # Reset for the current item
+                self.on_item_clicked(index)  # Retry to find from the beginning
+            self.last_clicked_item = None  # Reset if a different item is clicked
