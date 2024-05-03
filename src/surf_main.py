@@ -21,7 +21,7 @@ from surf_filepaths import Files
 from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor, CssEditor, 
                               CustomCompleter, FindReplaceWidget,
                               SyntaxVocabulary, ClosableTabBar,
-                              SkeletonTree)
+                              SkeletonTree, JsSandbox)
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect, QStringListModel, QTimer, 
     QSize, QTime, QUrl, Qt, QEvent)
@@ -504,7 +504,7 @@ class Ui_MainWindow(QMainWindow):
         self.cssEditorBtn.clicked.connect(self.css_editor)
         self.findReplaceBtn.clicked.connect(self.find_replace)
         #self.externalDepsBtn.clicked.connect()
-        #self.jsSandboxBtn.clicked.connect()
+        self.jsSandboxBtn.clicked.connect(self.js_sandbox)
         #self.indentationBtn.clicked.connect()
         #self.gitBtn.clicked.connect()
         #self.flaskBtn.clicked.connect()
@@ -520,6 +520,26 @@ class Ui_MainWindow(QMainWindow):
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
+    
+    def js_sandbox(self):
+        editor_idx = self.editorWidget.currentIndex()
+        editor = self.editor_tabs[editor_idx]        
+        sandbox = JsSandbox(editor)
+        updateButton = QPushButton("Run JS")
+        sandbox.layout.addWidget(updateButton)
+        updateButton.clicked.connect(sandbox.run_javascript)
+        web_view = sandbox.get_view()
+        self.splitWidget.addTab(sandbox, 'JS Sandbox')
+        self.tabWidget.addTab(web_view, 'JS Sandbox')
+        self.sandbox = sandbox
+    
+    def update_js_sandbox(self):
+        try:            
+            editor_idx = self.editorWidget.currentIndex()
+            editor = self.editor_tabs[editor_idx]        
+            self.sandbox.update_js_sandbox(editor)
+        except AttributeError:
+            pass    
     
     def update_skeleton(self):
         try:            

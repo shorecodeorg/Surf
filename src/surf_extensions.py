@@ -15,7 +15,9 @@ from PySide6.QtGui import (QSyntaxHighlighter, QTextCharFormat, QColor, QPainter
         QColor, QTextFormat, QTextCursor, QKeyEvent, QFont, QIcon,
         QStandardItem, QStandardItemModel)
 from PySide6.QtCore import (QRegularExpression, Qt, QStringListModel,
-        QTextStream, QFile, QRect)
+        QTextStream, QFile, QRect, QObject, Slot)
+from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtWebEngineWidgets import QWebEngineView
 
 class CustomDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
@@ -732,3 +734,40 @@ class SkeletonTree(QTreeView):
                 self.last_found_position = -1  # Reset for the current item
                 self.on_item_clicked(index)  # Retry to find from the beginning
             self.last_clicked_item = None  # Reset if a different item is clicked
+            
+class Bridge(QObject):
+    @Slot(str)
+    def log(self, message):
+        # This method will receive console.log messages from JavaScript
+        print("From JS:", message)
+
+class JsSandbox(QWidget):
+    def __init__(self, html_editor):
+        super().__init__()
+        self.layout = QVBoxLayout(self)
+
+        # Plain text editor for HTML content
+        self.editor = CodeEditor()
+        self.layout.addWidget(self.editor)
+
+        # WebEngineView for running JavaScript
+        self.view = QWebEngineView()
+        self.channel = QWebChannel()
+        self.bridge = Bridge()
+        self.channel.registerObject('bridge', self.bridge)
+        self.view.page().setWebChannel(self.channel)
+        self.html_editor = html_editor
+        self.view.setHtml(html_editor.toPlainText())
+        # Button or other mechanism to run JS code accessing the HTML content can be added here
+
+    def get_view(self):
+        return self.view
+
+    def run_javascript(self):
+        # Example method to run JavaScript code and access the HTML content from the editor
+        self.view.setHtml(self.html_editor.toPlainText())
+        js_code = self.editor.toPlainText()
+        self.view.page().runJavaScript(js_code)
+    
+    def update_js_sandbox(self, editor):
+        self.html_editor = editor
