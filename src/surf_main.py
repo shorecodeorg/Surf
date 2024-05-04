@@ -440,6 +440,11 @@ class Ui_MainWindow(QMainWindow):
               font-family: 'Courier New', monospace;
               font-size: 13px;
             }
+            ConsoleWidget {
+              background-color: #001a1a;
+              font-family: 'Courier New', monospace;
+              font-size: 10px;
+            }
             ''')
         files = Files()
         filepaths = files.get_files_list()
@@ -536,13 +541,17 @@ class Ui_MainWindow(QMainWindow):
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
     
+    def update_console(self):
+        self.console.clear_console()
+    
     def update_extensions(self, i):
         self.update_js_sandbox(i)
-        self.update_skeleton(i)
+        self.update_skeleton(i)        
         try:            
-            self.update_browsers(self.editor_tabs[i])
-        except TypeError:
-            pass
+            self.update_browsers(self.open_files[self.editorWidget.tabText(i)])
+            self.update_console()
+        except TypeError as e:
+            print(e)
     
     def js_sandbox(self):
         editor_idx = self.editorWidget.currentIndex()
@@ -559,11 +568,6 @@ class Ui_MainWindow(QMainWindow):
             self.sandbox.update_js_sandbox(editor)
         except AttributeError:
             pass
-    
-    def match_editor_idxs(self):
-        matching_editors = self.editor_tabs[1:][::-1]
-        matching_editors.append(self.editor_tabs[0])    
-        return matching_editors
     
     def update_skeleton(self, i):
         try:            
@@ -644,8 +648,8 @@ class Ui_MainWindow(QMainWindow):
         editor.removeTab(idx)
         if pop_from_list:
             self.editor_tabs.pop(idx)
-            if active_tab_name in self.open_files.keys():
-                del self.open_files[active_tab_name]
+        if active_tab_name in self.open_files.keys():
+            del self.open_files[active_tab_name]
     
     def save_tab(self, idx, dialog=False):        
         active_tab_name = self.editorWidget.tabText(idx)

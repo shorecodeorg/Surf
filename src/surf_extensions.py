@@ -828,6 +828,13 @@ class ConsoleWidget(QPlainTextEdit):
     def log_message(self, messages):
         for message in messages:
             self.appendPlainText(message)
+            
+    def clear_console(self):
+        self.appendPlainText('')
+        self.appendPlainText('---------------------------------------------------')
+        self.appendPlainText('----------------New Browser Instance---------------')
+        self.appendPlainText('---------------------------------------------------')
+        self.appendPlainText('')
 
 class ConsoleEnabledPage(QWebEnginePage):
     newData = Signal(list)
@@ -836,5 +843,5 @@ class ConsoleEnabledPage(QWebEnginePage):
 
     def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
         l = message.split(",")
-        l[0] = f'Line {lineNumber} > ' + l[0]
+        l[0] = f'{sourceID}: Line {lineNumber} > ' + l[0]
         self.newData.emit(l)  # Emit the signal with the list
