@@ -22,7 +22,7 @@ from surf_extensions import  (HtmlCssJsHighlighter, CodeEditor, CssEditor,
                               CustomCompleter, FindReplaceWidget,
                               SyntaxVocabulary, ClosableTabBar,
                               SkeletonTree, JsSandbox, ConsoleWidget,
-                              ConsoleEnabledPage)
+                              ConsoleEnabledPage, AiWidget, FlaskCompatWidget)
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect, QStringListModel, QTimer, 
     QSize, QTime, QUrl, Qt, QEvent)
@@ -515,8 +515,8 @@ class Ui_MainWindow(QMainWindow):
         #self.actionAbout_Surf.triggered.connect()
         #self.actionNew_Preview_Window.triggered.connect()
         self.actionSave_all.triggered.connect(self.save_all)
-        #self.aiRefactorBtn.clicked.connect()
-        #self.aiBugFixBtn.clicked.connect()
+        self.aiRefactorBtn.clicked.connect(self.ai_refactor)
+        self.aiBugFixBtn.clicked.connect(self.ai_bug_fix)
         #self.aiMetaDataBtn.clicked.connect()
         #self.aiTemplateBtn.clicked.connect()
         self.skeletonBtn.clicked.connect(self.skeleton)
@@ -526,7 +526,7 @@ class Ui_MainWindow(QMainWindow):
         self.jsSandboxBtn.clicked.connect(self.js_sandbox)
         #self.indentationBtn.clicked.connect()
         #self.gitBtn.clicked.connect()
-        #self.flaskBtn.clicked.connect()
+        self.flaskBtn.clicked.connect(self.flask_compat)
         self.editorWidget.tabBar().tabBarClicked.connect(self.update_extensions)
         self.editorWidget.tabBar().tabCloseRequested.connect(lambda idx: self.remove_tab(idx, self.editorWidget, pop_from_list=True))
         self.splitWidget.tabBar().tabCloseRequested.connect(lambda idx2: self.remove_tab(idx2, self.splitWidget))
@@ -541,16 +541,52 @@ class Ui_MainWindow(QMainWindow):
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
     
+    def flask_compat(self):
+        editor_idx = self.editorWidget.currentIndex()
+        editor = self.editor_tabs[editor_idx]                
+        self.flask_compat_widget = FlaskCompatWidget(editor)
+        self.splitWidget.addTab(self.flask_compat_widget, 'Flask Compatibility')
+        
+    def update_flask_compat(self, i):
+        try:            
+            editor = self.editor_tabs[i]        
+            self.flask_compat_widget.update_editor(editor)
+        except AttributeError:
+            pass                
+    
+    def ai_refactor(self):
+        self.ai_refactor_widget = AiWidget('refactor')
+        self.ai_refactor_widget.query_button.clicked.connect(self.ai_refactor_query)
+        self.splitWidget.addTab(self.ai_refactor_widget, 'AI Refactor')
+    
+    def ai_refactor_query(self):
+        query = self.ai_refactor_widget.query_text_edit.toPlainText()
+
+        response = f"AI response to: {query}"
+        self.ai_refactor_widget.answer_text_edit.setPlainText(response)         
+    
+    def ai_bug_fix(self):
+        self.ai_bug = AiWidget('bugfix')
+        self.ai_bug.query_button.clicked.connect(self.ai_bug_fix_query)
+        self.splitWidget.addTab(self.ai_bug, 'AI Bug Fix')
+    
+    def ai_bug_fix_query(self):
+        query = self.ai_bug.query_text_edit.toPlainText()
+
+        response = f"AI response to: {query}"
+        self.ai_bug.answer_text_edit.setPlainText(response)        
+    
     def update_console(self):
         self.console.clear_console()
     
     def update_extensions(self, i):
+        self.update_flask_compat(i)
         self.update_js_sandbox(i)
         self.update_skeleton(i)        
         try:            
             self.update_browsers(self.open_files[self.editorWidget.tabText(i)])
             self.update_console()
-        except TypeError as e:
+        except (TypeError,KeyError) as e:
             print(e)
     
     def js_sandbox(self):

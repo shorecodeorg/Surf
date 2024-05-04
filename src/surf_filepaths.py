@@ -14,7 +14,7 @@ from dataclasses import dataclass
 class Files:
     current_platform = platform.system()
     filepaths = ['logging/surf.log', 'data/images/sc.png', 'surf_main.py',
-                 'data/images/icon.png', 'data/images/close.png']
+                 'not used', 'data/images/close.png']
     win_filepaths = list()
     for f in filepaths:
         f = f.replace('/', '\\')

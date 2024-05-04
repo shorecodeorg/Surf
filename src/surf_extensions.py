@@ -11,7 +11,7 @@ from surf_filepaths import Files
 from PySide6.QtWidgets import (QApplication, QMainWindow, QPlainTextEdit,
         QWidget, QTextEdit, QCompleter, QHBoxLayout, QVBoxLayout, QMessageBox,
         QLineEdit, QPushButton, QLabel, QTabWidget, QStyledItemDelegate, QTabBar,
-        QTreeView, QSplitter)        
+        QTreeView, QSplitter, QLineEdit, QScrollArea)        
 from PySide6.QtGui import (QSyntaxHighlighter, QTextCharFormat, QColor, QPainter,
         QColor, QTextFormat, QTextCursor, QKeyEvent, QFont, QIcon,
         QStandardItem, QStandardItemModel)
@@ -845,3 +845,109 @@ class ConsoleEnabledPage(QWebEnginePage):
         l = message.split(",")
         l[0] = f'{sourceID}: Line {lineNumber} > ' + l[0]
         self.newData.emit(l)  # Emit the signal with the list
+        
+class AiWidget(QWidget):
+    def __init__(self, ai_type):
+        super().__init__()
+        self.ai_type = ai_type
+        self.query_placeholders = {'bugfix': "Enter the code block here to have AI fix the bugs...",
+                                   'refactor': "Enter the code block here to have AI refactor it...",}
+        self.initUI()
+
+    def initUI(self):
+        # Layout
+        layout = QVBoxLayout()
+        # Text entry area
+        self.query_text_edit = QTextEdit()
+        self.query_text_edit.setPlaceholderText(self.query_placeholders[self.ai_type])
+        # Text display area
+        self.answer_text_edit = QTextEdit()
+        self.answer_text_edit.setReadOnly(True)
+        # Button
+        self.query_button = QPushButton("Query AI")
+        # Add widgets to layout
+        layout.addWidget(self.query_text_edit)
+        layout.addWidget(self.answer_text_edit)
+        layout.addWidget(self.query_button)
+        # Set the layout on the application's window
+        self.setLayout(layout)
+
+class FlaskCompatWidget(QWidget):
+    def __init__(self, editor):
+        super().__init__()
+        self.html_editor = editor
+        self.matches_and_line_edits = []  # Store tuples of (match, QLineEdit)
+        self.initUI()
+
+    def initUI(self):
+        self.layout = QVBoxLayout()
+        # Button to parse HTML
+        self.parse_button = QPushButton("Parse HTML for Flask injections")
+        self.parse_button.clicked.connect(self.parse_html)
+        # Scroll area for matches and replacement UI
+        self.scroll_area = QScrollArea()
+        self.scroll_area_widget_contents = QWidget()
+        self.scroll_area_layout = QVBoxLayout(self.scroll_area_widget_contents)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(self.scroll_area_widget_contents)
+        # Replace All button
+        self.replace_all_button = QPushButton("Replace All")
+        self.replace_all_button.clicked.connect(self.replace_all_matches)
+        # Add widgets to layout
+        self.layout.addWidget(self.parse_button)
+        self.layout.addWidget(self.scroll_area)
+        self.layout.addWidget(self.replace_all_button)
+
+        self.setLayout(self.layout)
+
+    def parse_html(self):
+        html_content = self.html_editor.toPlainText()
+        # Regex to find Jinja template code
+        matches = re.findall(r"\{\{.*?\}\}", html_content)
+        # Clear previous results
+        while self.scroll_area_layout.count():
+            layout_item = self.scroll_area_layout.takeAt(0)  # Take the first item from the layout
+            if layout_item.widget():
+                layout_item.widget().deleteLater()  # If it's a widget, delete it
+            elif layout_item.layout():
+                # If it's a layout, recursively delete all items in this layout
+                while layout_item.layout().count():
+                    child_item = layout_item.layout().takeAt(0)
+                    if child_item.widget():
+                        child_item.widget().deleteLater()
+                    elif child_item.layout():
+                        self.clear_layout(child_item.layout())  # Recursively clear nested layouts
+                layout_item.layout().deleteLater()  # Finally, delete the empty layout
+        self.matches_and_line_edits.clear()  # Clear previous matches and line edits
+        # Create UI for each match
+        for match in matches:
+            self.add_match_ui(match)
+
+    def add_match_ui(self, match):
+        layout = QHBoxLayout()
+        label = QLabel(match)
+        line_edit = QLineEdit()
+        replace_button = QPushButton("Replace")
+        replace_button.clicked.connect(lambda checked, m=match, le=line_edit: self.replace_match(m, le.text()))
+
+        layout.addWidget(label)
+        layout.addWidget(line_edit)
+        layout.addWidget(replace_button)
+
+        self.scroll_area_layout.addLayout(layout)
+        self.matches_and_line_edits.append((match, line_edit))  # Store the match and its line edit
+
+    def replace_match(self, match, replacement):
+        current_html = self.html_editor.toPlainText()
+        updated_html = current_html.replace(match, replacement, 1)
+        self.html_editor.setPlainText(updated_html)
+
+    def replace_all_matches(self):
+        current_html = self.html_editor.toPlainText()
+        for match, line_edit in self.matches_and_line_edits:
+            replacement = line_edit.text()
+            current_html = current_html.replace(match, replacement)
+        self.html_editor.setPlainText(current_html)
+        
+    def update_editor(self, editor):
+        self.html_editor = editor
