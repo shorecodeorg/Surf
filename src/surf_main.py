@@ -541,6 +541,18 @@ class Ui_MainWindow(QMainWindow):
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
     
+    def update_extensions(self, i):
+        self.update_flask_compat(i)
+        self.update_js_sandbox(i)
+        self.update_skeleton(i)
+        self.update_find_replace(i)
+        try:            
+            self.update_browsers(self.open_files[self.editorWidget.tabText(i)])
+            self.update_console()
+        except (TypeError,KeyError) as e:
+            print(e)
+    
+    
     def flask_compat(self):
         editor_idx = self.editorWidget.currentIndex()
         editor = self.editor_tabs[editor_idx]                
@@ -578,17 +590,7 @@ class Ui_MainWindow(QMainWindow):
     
     def update_console(self):
         self.console.clear_console()
-    
-    def update_extensions(self, i):
-        self.update_flask_compat(i)
-        self.update_js_sandbox(i)
-        self.update_skeleton(i)        
-        try:            
-            self.update_browsers(self.open_files[self.editorWidget.tabText(i)])
-            self.update_console()
-        except (TypeError,KeyError) as e:
-            print(e)
-    
+        
     def js_sandbox(self):
         editor_idx = self.editorWidget.currentIndex()
         editor = self.editor_tabs[editor_idx]        
@@ -646,12 +648,26 @@ class Ui_MainWindow(QMainWindow):
         try:            
             current_tab_idx = self.editorWidget.currentIndex()
             editor = self.editor_tabs[current_tab_idx]
-            find_replace = FindReplaceWidget(editor)
-            self.splitWidget.addTab(find_replace, 'Find/Replace')
+            self.find_replace = FindReplaceWidget(editor)
+            self.splitWidget.addTab(self.find_replace, 'Find/Replace')
+            # Setting the tab order explicitly
+            self.setTabOrder(self.find_replace.find_input, self.find_replace.find_button)
+            self.setTabOrder(self.find_replace.find_button, self.find_replace.searchLineEdit)
+            self.setTabOrder(self.find_replace.searchLineEdit, self.find_replace.searchButton)
+            self.setTabOrder(self.find_replace.searchButton, self.find_replace.replaceLineEdit)
+            self.setTabOrder(self.find_replace.replaceLineEdit, self.find_replace.replaceButton)
+            self.setTabOrder(self.find_replace.replaceButton, self.find_replace.selectAllButton)
+            self.setTabOrder(self.find_replace.selectAllButton, self.find_replace.unselectAllButton)                        
         except IndexError:
             print('Cannot open find/replace, Open editor first')
+            
+    def update_find_replace(self, i):
+        try:            
+            editor = self.editor_tabs[i]        
+            self.find_replace.updateEditor(editor)
+        except AttributeError:
+            pass        
         
-
     def update_browsers(self, filename):
         local_url = QUrl.fromLocalFile(filename)
         self.browser1080.load(local_url)
