@@ -11,7 +11,7 @@ from surf_filepaths import Files
 from PySide6.QtWidgets import (QApplication, QMainWindow, QPlainTextEdit,
         QWidget, QTextEdit, QCompleter, QHBoxLayout, QVBoxLayout, QMessageBox,
         QLineEdit, QPushButton, QLabel, QTabWidget, QStyledItemDelegate, QTabBar,
-        QTreeView, QSplitter, QLineEdit, QScrollArea)        
+        QTreeView, QSplitter, QLineEdit, QScrollArea, QCheckBox)        
 from PySide6.QtGui import (QSyntaxHighlighter, QTextCharFormat, QColor, QPainter,
         QColor, QTextFormat, QTextCursor, QKeyEvent, QFont, QIcon,
         QStandardItem, QStandardItemModel)
@@ -270,7 +270,6 @@ class FindReplaceWidget(QWidget):
         # Layouts
         main_layout = QVBoxLayout()
         find_layout = QHBoxLayout()
-        replace_layout = QHBoxLayout()
 
         # Find widgets
         self.find_input = QLineEdit()
@@ -281,18 +280,40 @@ class FindReplaceWidget(QWidget):
         find_layout.addWidget(self.find_input)
         find_layout.addWidget(self.find_button)
 
-        # Replace widgets
-        self.replace_input = QLineEdit()
-        self.replace_button = QPushButton("Replace")
-        self.replace_button.clicked.connect(self.replace_text)
+        # Search area
+        self.searchLineEdit = QLineEdit(self)
+        self.searchButton = QPushButton("Find All", self)
+        self.searchButton.clicked.connect(self.parseText)
 
-        replace_layout.addWidget(QLabel("Replace with:"))
-        replace_layout.addWidget(self.replace_input)
-        replace_layout.addWidget(self.replace_button)
+        searchLayout = QHBoxLayout()
+        searchLayout.addWidget(QLabel("Find All:"))
+        searchLayout.addWidget(self.searchLineEdit)
+        searchLayout.addWidget(self.searchButton)
+
+        # Replacement area
+        self.replaceLineEdit = QLineEdit(self)
+        self.replaceButton = QPushButton("Replace Selected", self)
+        self.replaceButton.clicked.connect(self.replaceChecked)
+
+        replaceLayout = QHBoxLayout()
+        replaceLayout.addWidget(QLabel("Replace with:"))
+        replaceLayout.addWidget(self.replaceLineEdit)
+        replaceLayout.addWidget(self.replaceButton)
+
+        # Results area
+        self.resultsWidget = QWidget()
+        self.resultsLayout = QVBoxLayout(self.resultsWidget)
+
+        # Scroll Area for results
+        self.resultsScrollArea = QScrollArea()
+        self.resultsScrollArea.setWidgetResizable(True)
+        self.resultsScrollArea.setWidget(self.resultsWidget)
 
         # Add layouts to main layout
         main_layout.addLayout(find_layout)
-        main_layout.addLayout(replace_layout)
+        main_layout.addLayout(searchLayout)        
+        main_layout.addWidget(self.resultsScrollArea)
+        main_layout.addLayout(replaceLayout)
 
         self.setLayout(main_layout)
 
@@ -332,6 +353,44 @@ class FindReplaceWidget(QWidget):
             QMessageBox.information(self, "Replace", f"All occurrences of '{text}' have been replaced.")
         else:
             QMessageBox.information(self, "Replace", f"Cannot find '{text}'")
+            
+    def parseText(self):
+        # Clear previous results
+        while item := self.resultsLayout.takeAt(0):
+            item.widget().deleteLater()
+
+        search_term = self.searchLineEdit.text()
+        text = self.text_editor.toPlainText()
+        lines = text.split('\n')
+
+        for line in lines:
+            if search_term in line:
+                cb = QCheckBox(line.strip())
+                self.resultsLayout.addWidget(cb)
+
+    def replaceChecked(self):
+        text = self.text_editor.toPlainText()
+        replacement = self.replaceLineEdit.text()
+        lines = text.split('\n')
+
+        for i in range(self.resultsLayout.count()):
+            checkbox = self.resultsLayout.itemAt(i).widget()
+            if checkbox.isChecked():
+                search_term = checkbox.text()
+                # Adjusting the pattern to match opening and closing tags separately
+                open_tag_pattern = r'<\b{}\b'.format(re.escape(search_term))
+                close_tag_pattern = r'</\b{}\b'.format(re.escape(search_term))
+
+                for j, line in enumerate(lines):
+                    # Replace opening tags
+                    lines[j] = re.sub(open_tag_pattern, f'<{replacement}', line)
+                    # Replace closing tags
+                    lines[j] = re.sub(close_tag_pattern, f'</{replacement}', lines[j])
+
+        self.text_editor.setPlainText('\n'.join(lines))
+        
+    def updateEditor(self, editor):
+        self.text_editor = editor
 
 class CustomCompleter(QCompleter):
     def __init__(self, vocabulary, text_editor, parent=None):
