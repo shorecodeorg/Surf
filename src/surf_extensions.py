@@ -11,7 +11,7 @@ from surf_filepaths import Files
 from PySide6.QtWidgets import (QApplication, QMainWindow, QPlainTextEdit,
         QWidget, QTextEdit, QCompleter, QHBoxLayout, QVBoxLayout, QMessageBox,
         QLineEdit, QPushButton, QLabel, QTabWidget, QStyledItemDelegate, QTabBar,
-        QTreeView, QSplitter, QLineEdit, QScrollArea, QCheckBox)        
+        QTreeView, QSplitter, QLineEdit, QScrollArea, QCheckBox, QGridLayout)        
 from PySide6.QtGui import (QSyntaxHighlighter, QTextCharFormat, QColor, QPainter,
         QColor, QTextFormat, QTextCursor, QKeyEvent, QFont, QIcon,
         QStandardItem, QStandardItemModel)
@@ -267,55 +267,70 @@ class FindReplaceWidget(QWidget):
         self.initUI()
 
     def initUI(self):
-        # Layouts
-        main_layout = QVBoxLayout()
-        find_layout = QHBoxLayout()
-
+        # Main layout
+        grid_layout = QGridLayout()
+    
         # Find widgets
         self.find_input = QLineEdit()
         self.find_button = QPushButton("Find")
         self.find_button.clicked.connect(self.find_text)
-
-        find_layout.addWidget(QLabel("Find:"))
-        find_layout.addWidget(self.find_input)
-        find_layout.addWidget(self.find_button)
-
+    
+        grid_layout.addWidget(QLabel("Find:"), 0, 0)  # Row 0, Column 0
+        grid_layout.addWidget(self.find_input, 0, 1)  # Row 0, Column 1
+        grid_layout.addWidget(self.find_button, 0, 2)  # Row 0, Column 2
+    
         # Search area
         self.searchLineEdit = QLineEdit(self)
         self.searchButton = QPushButton("Find All", self)
         self.searchButton.clicked.connect(self.parseText)
-
-        searchLayout = QHBoxLayout()
-        searchLayout.addWidget(QLabel("Find All:"))
-        searchLayout.addWidget(self.searchLineEdit)
-        searchLayout.addWidget(self.searchButton)
-
+    
+        grid_layout.addWidget(QLabel("Find All:"), 1, 0)  # Row 1, Column 0
+        grid_layout.addWidget(self.searchLineEdit, 1, 1)  # Row 1, Column 1
+        grid_layout.addWidget(self.searchButton, 1, 2)  # Row 1, Column 2
+    
         # Replacement area
         self.replaceLineEdit = QLineEdit(self)
         self.replaceButton = QPushButton("Replace Selected", self)
         self.replaceButton.clicked.connect(self.replaceChecked)
-
-        replaceLayout = QHBoxLayout()
-        replaceLayout.addWidget(QLabel("Replace with:"))
-        replaceLayout.addWidget(self.replaceLineEdit)
-        replaceLayout.addWidget(self.replaceButton)
-
+    
+        grid_layout.addWidget(QLabel("Replace with:"), 3, 0)  # Row 2, Column 0
+        grid_layout.addWidget(self.replaceLineEdit, 3, 1)  # Row 2, Column 1
+        grid_layout.addWidget(self.replaceButton, 4, 0, 1, 2)  # Row 2, Column 2
+    
         # Results area
         self.resultsWidget = QWidget()
         self.resultsLayout = QVBoxLayout(self.resultsWidget)
-
+    
         # Scroll Area for results
         self.resultsScrollArea = QScrollArea()
         self.resultsScrollArea.setWidgetResizable(True)
         self.resultsScrollArea.setWidget(self.resultsWidget)
+    
+        self.selectAllButton = QPushButton("Select All", self)
+        self.selectAllButton.clicked.connect(self.selectAllCheckboxes)
+        grid_layout.addWidget(self.selectAllButton, 3, 3, 1, 1)  # Row 2, Column 0, Span 1 row, Span 2 columns
+        
+        self.unselectAllButton = QPushButton("Unselect All", self)
+        self.unselectAllButton.clicked.connect(self.unselectAllCheckboxes)
+        grid_layout.addWidget(self.unselectAllButton, 4, 3, 1, 1)  # Row 2, Column 1, Span 1 row, Span 2 columns    
+        # Adding the results scroll area to the grid layout
+        # Since the scroll area should span multiple columns, we use the addWidget method with row, column, rowspan, and colspan parameters
+        grid_layout.addWidget(self.resultsScrollArea, 2, 0, 1, 3)  # Row 3, Column 0, Span 1 row, Span 3 columns
 
-        # Add layouts to main layout
-        main_layout.addLayout(find_layout)
-        main_layout.addLayout(searchLayout)        
-        main_layout.addWidget(self.resultsScrollArea)
-        main_layout.addLayout(replaceLayout)
+        # Set the main layout
+        self.setLayout(grid_layout)
 
-        self.setLayout(main_layout)
+    def selectAllCheckboxes(self):
+        for i in range(self.resultsLayout.count()):
+            widget = self.resultsLayout.itemAt(i).widget()
+            if isinstance(widget, QCheckBox):
+                widget.setChecked(True)
+
+    def unselectAllCheckboxes(self):
+        for i in range(self.resultsLayout.count()):
+            widget = self.resultsLayout.itemAt(i).widget()
+            if isinstance(widget, QCheckBox):
+                widget.setChecked(False)
 
     def find_text(self):
         text = self.find_input.text()
@@ -363,31 +378,41 @@ class FindReplaceWidget(QWidget):
         text = self.text_editor.toPlainText()
         lines = text.split('\n')
 
-        for line in lines:
+        match_count = 0
+        self.matches = dict()
+        for i, line in enumerate(lines):
             if search_term in line:
-                cb = QCheckBox(line.strip())
+                self.matches[match_count] = [i, line.strip()]
+                cb = QCheckBox(f'line {i+1}: ' + line.strip())
                 self.resultsLayout.addWidget(cb)
+                match_count += 1 
 
     def replaceChecked(self):
+        # Save the current cursor position
+        current_cursor = self.text_editor.textCursor()
+        original_position = current_cursor.position()
+    
         text = self.text_editor.toPlainText()
-        replacement = self.replaceLineEdit.text()
+        replacement_text = self.replaceLineEdit.text()
+        search_term = self.searchLineEdit.text()
         lines = text.split('\n')
-
+    
         for i in range(self.resultsLayout.count()):
             checkbox = self.resultsLayout.itemAt(i).widget()
             if checkbox.isChecked():
-                search_term = checkbox.text()
-                # Adjusting the pattern to match opening and closing tags separately
-                open_tag_pattern = r'<\b{}\b'.format(re.escape(search_term))
-                close_tag_pattern = r'</\b{}\b'.format(re.escape(search_term))
-
-                for j, line in enumerate(lines):
-                    # Replace opening tags
-                    lines[j] = re.sub(open_tag_pattern, f'<{replacement}', line)
-                    # Replace closing tags
-                    lines[j] = re.sub(close_tag_pattern, f'</{replacement}', lines[j])
-
+                result_term = self.matches[i][1]
+                line = self.matches[i][0]
+                temp_replacement = result_term.replace(search_term, replacement_text)
+                print(temp_replacement)
+                lines[line] = lines[line].replace(result_term, temp_replacement)
+    
+        # Update the text in the editor
         self.text_editor.setPlainText('\n'.join(lines))
+    
+        # Restore the cursor position
+        new_cursor = QTextCursor(self.text_editor.document())
+        new_cursor.setPosition(min(original_position, self.text_editor.document().characterCount() - 1))
+        self.text_editor.setTextCursor(new_cursor)    
         
     def updateEditor(self, editor):
         self.text_editor = editor
