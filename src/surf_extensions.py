@@ -5,34 +5,67 @@
 
 import re
 import sys
-from datetime import datetime
 from surf_logging import set_logging
 from surf_filepaths import Files
-from PySide6.QtWidgets import (QApplication, QMainWindow, QPlainTextEdit,
+from PySide6.QtWidgets import (QPlainTextEdit,
         QWidget, QTextEdit, QCompleter, QHBoxLayout, QVBoxLayout, QMessageBox,
         QLineEdit, QPushButton, QLabel, QTabWidget, QStyledItemDelegate, QTabBar,
         QTreeView, QSplitter, QLineEdit, QScrollArea, QCheckBox, QGridLayout)        
 from PySide6.QtGui import (QSyntaxHighlighter, QTextCharFormat, QColor, QPainter,
-        QColor, QTextFormat, QTextCursor, QKeyEvent, QFont, QIcon,
+        QColor, QTextFormat, QTextCursor, QKeyEvent, QIcon,
         QStandardItem, QStandardItemModel)
-from PySide6.QtCore import (QRegularExpression, Qt, QStringListModel,
+from PySide6.QtCore import (QRegularExpression, Qt,
         QTextStream, QFile, QRect, QObject, Slot, Signal)
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import  QWebEnginePage
 
 class CustomDelegate(QStyledItemDelegate):
+    """
+    A custom delegate that modifies the size hint of auto-complete items to reduce their height.
+
+    Inheritance:
+    - QStyledItemDelegate: QT object used as a template.
+    """
+    
     def __init__(self, parent=None):
         super(CustomDelegate, self).__init__(parent)
 
     def sizeHint(self, option, index):
+        """
+        Returns the size hint for an item, with a modified height.
+        
+        The height of the item is reduced by 15 pixels from the default size hint.
+        
+        Parameters:
+        - option: The option providing style options for the item.
+        - index: The index of the item in the model.
+        
+        Returns:
+        - QSize: The modified size hint for the item.
+        """        
         size = super(CustomDelegate, self).sizeHint(option, index)
         # Reduce the height of each item, adjust according to your needs
         size.setHeight(size.height() - 15)
         return size
 
 class HtmlCssJsHighlighter(QSyntaxHighlighter):
+    """
+    A syntax highlighter for HTML, CSS, and JavaScript code.
+    
+    This highlighter applies different text formatting rules for various elements of HTML, CSS,
+    and JavaScript, such as tags, attributes, selectors, properties, keywords, and comments.
+    
+    Inheritance:
+    - QSyntaxHighlighter: QT object of this highlighter used as a template.
+    """    
     def __init__(self, parent=None):
+        """
+        Sets up the highlighting rules for different syntax elements.
+        
+        This internal method initializes text formatting for HTML tags, attributes, CSS selectors,
+        properties, JavaScript keywords, special characters, strings, numbers, and comments.
+        """        
         super().__init__(parent)
         self.highlightingRules = []
 
@@ -97,6 +130,15 @@ class HtmlCssJsHighlighter(QSyntaxHighlighter):
         self.highlightingRules.append((singleLineCommentPattern, singleLineCommentFormat))        
 
     def highlightBlock(self, text):
+        """
+        Applies syntax highlighting to the given block of text.
+        
+        This method is called automatically by the QSyntaxHighlighter to apply the highlighting
+        rules to each block of text in the document.
+        
+        Parameters:
+        - text: The text block to highlight.
+        """        
         for pattern, format in self.highlightingRules:
             expression = QRegularExpression(pattern)
             matchIterator = expression.globalMatch(text)
@@ -105,18 +147,65 @@ class HtmlCssJsHighlighter(QSyntaxHighlighter):
                 self.setFormat(match.capturedStart(), match.capturedLength(), format)
 
 class LineNumberArea(QWidget):
+    """
+    A widget for displaying line numbers in a QTextEdit or QPlainTextEdit.
+    
+    This widget is intended to be used as a child of a text editor widget to display line numbers
+    adjacent to the text. It should be updated in response to changes in the editor's document or
+    viewport.
+    
+    Inheritance:
+    - QWidget: QT object used as a template.
+    """    
     def __init__(self, editor):
+        """
+            Parameters:
+            - editor: The text editor widget to which this line number area is associated.
+        """         
         super().__init__(editor)
         self.codeEditor = editor
 
     def sizeHint(self):
+        """
+         Returns the recommended size for the line number area.
+         
+         The width is determined by the associated code editor's lineNumberAreaWidth method,
+         and the height is set to 0, allowing the layout to adjust dynamically.
+         
+         Returns:
+         - QSize: The recommended size for the widget.
+         """        
         return QSize(self.codeEditor.lineNumberAreaWidth(), 0)
 
     def paintEvent(self, event):
+        """
+        Handles the paint event for the line number area.
+        
+        This method is called whenever the line number area needs to be repainted, such as when
+        the editor is scrolled or resized.
+        
+        Parameters:
+        - event: The QPaintEvent object containing event details.
+        """        
         self.codeEditor.lineNumberAreaPaintEvent(event)
 
 class CodeEditor(QPlainTextEdit):
+    """
+    A custom code editor widget that extends QPlainTextEdit to support line numbers,
+    syntax highlighting, and other features useful for coding.
+
+    Attributes:
+        - lineNumberArea (QWidget): A widget that displays line numbers adjacent to the editor.
+    Inheritance:
+        - QPlainTextEdit: QT object used as template.
+    """    
     def __init__(self, parent=None):
+        """
+        Initializes the CodeEditor instance.
+
+        Args:
+            parent (QWidget, optional): The parent widget. Defaults to None.
+        """        
         super().__init__(parent)
         self.lineNumberArea = LineNumberArea(self)
 
@@ -127,23 +216,57 @@ class CodeEditor(QPlainTextEdit):
         self.updateLineNumberAreaWidth(0)  # Initial update with default value
 
     def lineNumberAreaWidth(self):
+        """
+        Calculates the width of the line number area based on the number of lines in the document.
+    
+        Returns:
+            int: The width of the line number area in pixels.
+        """        
         lines = self.document().blockCount()
         digits = len(str(lines))
         space = 3 + self.fontMetrics().horizontalAdvance('9') * digits
         return space
 
     def updateLineNumberAreaWidth(self, _=0):
+        """
+        Updates the width of the line number area. This method is typically called when the number
+        of lines in the document changes.
+    
+        Args:
+            _ (int, optional): Placeholder parameter, not used. Defaults to 0.
+        """        
         self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
 
     def updateLineNumberArea(self, _=0):
+        ):
+            """
+            Redraws the line number area. This method is typically called when the document is scrolled
+            or the line number area width is updated.
+        
+            Args:
+                _ (int, optional): Placeholder parameter, not used. Defaults to 0.
+            """                
         self.lineNumberArea.update()
 
     def resizeEvent(self, event):
+        """
+        Handles the resize event for the CodeEditor widget. This method is overridden to adjust
+        the line number area's size and position accordingly.
+    
+        Args:
+            event (QResizeEvent): The resize event.
+        """        
         super().resizeEvent(event)
         cr = self.contentsRect()
         self.lineNumberArea.setGeometry(cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height())
 
     def lineNumberAreaPaintEvent(self, event):
+        """
+        Paints the line numbers in the line number area.
+    
+        Args:
+            event (QPaintEvent): The paint event.
+        """        
         painter = QPainter(self.lineNumberArea)
         painter.fillRect(event.rect(), QColor(Qt.white))
 
@@ -168,6 +291,10 @@ class CodeEditor(QPlainTextEdit):
             blockNumber += 1
 
     def highlightCurrentLine(self):
+        """
+        Highlights the current line where the cursor is located. This provides a visual cue for
+        the user to easily identify the active line.
+        """        
         extraSelections = []
 
         if not self.isReadOnly():
@@ -184,6 +311,13 @@ class CodeEditor(QPlainTextEdit):
         self.setExtraSelections(extraSelections)
 
     def keyPressEvent(self, event):
+        """
+        Handles key press events for the CodeEditor widget. This method is overridden to implement
+        custom behavior for tab and shift+tab (indent and un-indent).
+    
+        Args:
+            event (QKeyEvent): The key event.
+        """        
         if event.key() == Qt.Key_Tab and event.modifiers() == Qt.NoModifier:
             self.indentText(True)
         elif event.key() == Qt.Key_Backtab:  # Shift+Tab is recognized as Backtab
@@ -192,6 +326,12 @@ class CodeEditor(QPlainTextEdit):
             super().keyPressEvent(event)
 
     def indentText(self, increase=True):
+        """
+        Indents or un-indents the selected text or the current line if no text is selected.
+    
+        Args:
+            increase (bool, optional): If True, indents the text. If False, un-indents the text. Defaults to True.
+        """        
         cursor = self.textCursor()
     
         # Initialize start and end variables at the beginning
@@ -261,12 +401,31 @@ class CodeEditor(QPlainTextEdit):
         self.setTextCursor(cursor)
 
 class FindReplaceWidget(QWidget):
+    """
+    A widget that provides find and replace functionality for a text editor.
+
+    Attributes:
+        -text_editor (QPlainTextEdit): The text editor to which the find and replace functionality is applied.
+    Inheritance:
+        - QWidget: QT object used as template.
+    """    
     def __init__(self, text_editor):
+        """
+        Initializes the FindReplaceWidget instance.
+
+        Args:
+            text_editor (QPlainTextEdit): The text editor to which the find and replace functionality will be applied.
+        """        
         super().__init__()
         self.text_editor = text_editor
         self.initUI()
 
     def initUI(self):
+        """
+        Initializes the user interface components of the FindReplaceWidget.
+
+        Sets up the layout, input fields, buttons, and connects button click events to their respective methods.
+        """        
         # Main layout
         grid_layout = QGridLayout()
     
@@ -321,18 +480,29 @@ class FindReplaceWidget(QWidget):
         self.setLayout(grid_layout)
 
     def selectAllCheckboxes(self):
+        """
+        Selects all checkboxes in the results area, marking all found occurrences for replacement.
+        """        
         for i in range(self.resultsLayout.count()):
             widget = self.resultsLayout.itemAt(i).widget()
             if isinstance(widget, QCheckBox):
                 widget.setChecked(True)
 
     def unselectAllCheckboxes(self):
+        """
+        Unselects all checkboxes in the results area, clearing selection of found occurrences.
+        """        
         for i in range(self.resultsLayout.count()):
             widget = self.resultsLayout.itemAt(i).widget()
             if isinstance(widget, QCheckBox):
                 widget.setChecked(False)
 
     def find_text(self):
+        """
+        Initiates a search for the text entered in the find input field within the text editor.
+
+        Displays a message if the search query is empty or if the text cannot be found.
+        """        
         text = self.find_input.text()
         if text == "":
             QMessageBox.information(self, "Find", "The search query is empty.")
@@ -350,6 +520,11 @@ class FindReplaceWidget(QWidget):
 
     
     def replace_text(self):
+        """
+        Replaces the currently selected occurrence of the found text with the replacement text.
+
+        If no text is selected, it attempts to find and replace the next occurrence.
+        """        
         text = self.find_input.text()
         replace_with = self.replace_input.text()
     
@@ -370,6 +545,10 @@ class FindReplaceWidget(QWidget):
             QMessageBox.information(self, "Replace", f"Cannot find '{text}'")
             
     def parseText(self):
+        """
+        Finds all occurrences of the search term entered in the search input field and displays them as checkboxes
+        in the results area, allowing the user to select which occurrences to replace.
+        """        
         # Clear previous results
         while item := self.resultsLayout.takeAt(0):
             item.widget().deleteLater()
@@ -388,6 +567,11 @@ class FindReplaceWidget(QWidget):
                 match_count += 1 
 
     def replaceChecked(self):
+        """
+        Replaces all selected occurrences of the found text with the replacement text.
+
+        Only occurrences that are marked by checked checkboxes in the results area will be replaced.
+        """        
         # Save the current cursor position
         current_cursor = self.text_editor.textCursor()
         original_position = current_cursor.position()
@@ -415,10 +599,35 @@ class FindReplaceWidget(QWidget):
         self.text_editor.setTextCursor(new_cursor)    
         
     def updateEditor(self, editor):
+        """
+        Updates the reference to the text editor to a new editor.
+
+        This allows the FindReplaceWidget to be used with a different text editor.
+
+        Args:
+            editor (QPlainTextEdit): The new text editor to apply the find and replace functionality to.
+        """        
         self.text_editor = editor
 
 class CustomCompleter(QCompleter):
+    """
+    A custom completer that provides auto-completion for a text editor, supporting dot notation and other features.
+
+    Attributes:
+        editor (QPlainTextEdit): The text editor to which the completer is attached.
+        pop_up (QWidget): The popup widget used to display completion suggestions.
+    Inheritance:
+        - QCompleter: QT object used as template.
+    """    
     def __init__(self, vocabulary, text_editor, parent=None):
+        """
+        Initializes the CustomCompleter instance.
+
+        Args:
+            vocabulary (list or QStringList): The list of words or phrases that the completer uses for suggestions.
+            text_editor (QPlainTextEdit): The text editor to which the completer is attached.
+            parent (QWidget, optional): The parent widget. Defaults to None.
+        """        
         super(CustomCompleter, self).__init__(vocabulary, parent)
         self.setPopup(QCompleter.popup(self))  # Ensure the popup is created
         self.pop_up = QCompleter.popup(self)
@@ -499,7 +708,30 @@ class CustomCompleter(QCompleter):
         #return super(CustomCompleter, self).pathFromIndex(index)    
 
 class CssEditor(CodeEditor):
+    """
+    A specialized code editor designed for editing CSS files, extending the generic CodeEditor class.
+
+    Attributes:
+        highlighter: An instance of HtmlCssJsHighlighter for syntax highlighting within the document.
+        container: A QWidget that serves as a container for the editor and additional UI elements.
+        find_selector_button: A QPushButton used to initiate the search for a CSS selector within the document.
+        parent: The parent widget, typically a QTabWidget, to which this editor is attached as a tab.
+
+    Methods:
+        __init__(self, parent): Initializes the CssEditor with a parent widget.
+        get_button(self): Returns the find_selector_button.
+        load_css_file(self, file_path): Loads a CSS file's content into the editor.
+        find_selector(self, other_editor): Searches for a CSS selector based on the selection in another editor.
+    Inheritance:
+        - CodeEditor: Custom QT object used as template.
+    """    
     def __init__(self, parent):
+        """
+        Initializes the CssEditor with syntax highlighting, layout configuration, and UI elements.
+
+        Parameters:
+            parent: The parent widget, typically a QTabWidget, to which this editor is attached.
+        """        
         super().__init__(parent)
         # Add syntax highlighting
         self.highlighter = HtmlCssJsHighlighter(self.document())
@@ -525,9 +757,21 @@ class CssEditor(CodeEditor):
         self.parent = parent
         
     def get_button(self):
+        """
+        Returns the QPushButton used to find a CSS selector within the document.
+
+        Returns:
+            QPushButton: The button used for initiating a search for a CSS selector.
+        """        
         return self.find_selector_button
 
     def load_css_file(self, file_path):
+        """
+        Loads the content of a CSS file into the editor.
+
+        Parameters:
+            file_path (str): The path to the CSS file to be loaded.
+        """        
         file = QFile(file_path)
         if file.open(QFile.ReadOnly | QFile.Text):
             stream = QTextStream(file)
@@ -535,6 +779,12 @@ class CssEditor(CodeEditor):
             file.close()
 
     def find_selector(self, other_editor):
+        """
+        Searches for a CSS selector in the document based on the selection in another editor.
+
+        Parameters:
+            other_editor (QTextEdit): Another text editor instance from which the selected text is used as the search query.
+        """        
         # Assuming another editor is a QTextEdit instance named `self.other_editor`
         # For demonstration, let's just assume other_editor is passed as an argument
         selector = other_editor.textCursor().selectedText()
@@ -555,8 +805,23 @@ class CssEditor(CodeEditor):
                     print(f"Selector '{selector}' not found in the CSS file.")
 
 class SyntaxVocabulary:
+    """
+    A class representing the syntax vocabulary for HTML, JavaScript, and CSS.
+
+    Attributes:
+        html_vocab (list): A list of HTML tags and elements.
+        js_syntax (list): A list of JavaScript syntax elements and keywords.
+        css_items (list): A list of CSS properties and selectors.
+
+    Methods:
+        add_end_tags(self, tags): Generates closing tags for a list of HTML opening tags.
+        get_all_vocab(self): Returns a combined list of all vocabulary items.
+        get_js_vocab(self): Returns the list of JavaScript vocabulary items.
+    """    
     def __init__(self):
-        
+        """
+        Initializes the SyntaxVocabulary with predefined lists of HTML, JavaScript, and CSS vocabulary.
+        """        
         self.html_vocab = ['<a>', '<abbr>', '<address>', '<area>', '<article>', '<aside>',
                       '<audio>', '<b>', '<base>', '<bdi>', '<bdo>', '<blockquote>', '<body>',
                       '<br>', '<button>', '<canvas>', '<caption>', '<cite>', '<code>',
@@ -640,16 +905,52 @@ class SyntaxVocabulary:
 
         
     def add_end_tags(self, tags):
+        """
+        Generates closing tags for a list of HTML opening tags.
+
+        Parameters:
+            tags (list): A list of HTML opening tags.
+
+        Returns:
+            list: A list containing the corresponding closing tags for the input opening tags.
+        """        
         return [f'</{tag[1:]}' for tag in tags]
     
     def get_all_vocab(self):
+        """
+        Returns a combined list of all vocabulary items across HTML, JavaScript, and CSS.
+
+        Returns:
+            list: A combined list of HTML tags, JavaScript syntax elements, and CSS properties.
+        """        
         return self.html_vocab + self.js_syntax + self.css_items
     
     def get_js_vocab(self):
+        """
+        Returns the list of JavaScript vocabulary items.
+
+        Returns:
+            list: A list of JavaScript syntax elements and keywords.
+        """        
         return self.js_syntax
     
 class ClosableTabBar(QTabBar):
+    """
+    A custom QTabBar widget that supports closable tabs with a close icon.
+
+    Attributes:
+        closeIcon (QIcon): Icon displayed on each tab for closing the tab.
+
+    Args:
+        parent (QWidget, optional): The parent widget. Defaults to None.
+    Inheritance:
+        - QTabBar: QT object used as template.
+
+    """    
     def __init__(self, parent=None):
+        """
+        Initializes the ClosableTabBar with a close icon for each tab.
+        """        
         super().__init__(parent)
         files =  Files()
         filepaths = files.get_files_list()
@@ -660,12 +961,28 @@ class ClosableTabBar(QTabBar):
         self.closeIcon = QIcon(close_icon_fp)  # Adjust path as necessary
         
     def tabSizeHint(self, index, width=20):
+        """
+        Provides a size hint for each tab, including extra width for the close button.
+
+        Args:
+            index (int): The index of the tab.
+            width (int, optional): The additional width for the close button. Defaults to 20.
+
+        Returns:
+            QSize: The recommended size for the tab.
+        """        
         size = super().tabSizeHint(index)
         # Add extra width for the close button
         size.setWidth(size.width() + width)  
         return size
 
     def paintEvent(self, event):
+        """
+        Custom paint event to draw the close icon on each tab.
+
+        Args:
+            event (QPaintEvent): The paint event.
+        """        
         super().paintEvent(event)
         painter = QPainter(self)
         for index in range(self.count()):
@@ -680,6 +997,12 @@ class ClosableTabBar(QTabBar):
             self.closeIcon.paint(painter, closeButtonRect)
 
     def mousePressEvent(self, event):
+        """
+        Mouse press event to handle clicks on the close icon of tabs.
+
+        Args:
+            event (QMouseEvent): The mouse event.
+        """        
         super().mousePressEvent(event)
         for index in range(self.count()):
             tabRect = self.tabRect(index)
@@ -690,7 +1013,24 @@ class ClosableTabBar(QTabBar):
                 break
 
 class SkeletonTree(QTreeView):
+    """
+    A custom QTreeView widget designed to display a hierarchical structure of elements,
+    typically representing the structure of a document or a piece of code.
+
+    Attributes:
+        model (QStandardItemModel): The model providing items to the view.
+        last_clicked_item (QStandardItem, optional): The last item clicked in the tree view.
+        last_found_position (int): The position of the last found item, used for navigation.
+
+    Args:
+        editor (QPlainTextEdit): The editor whose content is used to populate the tree view.    
+    Inheritance:
+        - QTreeView: QT object used as template.        
+    """
     def __init__(self, editor):
+        """
+        Initializes the SkeletonTree with the content from the specified editor.
+        """        
         super().__init__()
         self.setEditTriggers(QTreeView.NoEditTriggers)
         self.clicked.connect(self.on_item_clicked)
@@ -704,6 +1044,15 @@ class SkeletonTree(QTreeView):
         self.last_found_position = -1
         
     def filter_content(self, preserved_text):
+        """
+        Filters the content to simplify it for display in the tree view.
+
+        Args:
+            preserved_text (str): The text content to be filtered.
+
+        Returns:
+            str: The filtered text content.
+        """        
         # Remove multiline comments from <script> content
         def clean_script_content(match):
             # Remove multiline comments within script tags
@@ -726,6 +1075,12 @@ class SkeletonTree(QTreeView):
         return filtered_text
 
     def update_tree_view(self, editor):
+        """
+        Updates the tree view based on the content of the specified editor.
+
+        Args:
+            editor (QPlainTextEdit): The editor whose content is used to update the tree view.
+        """        
         self.editor = editor
         text = editor.toPlainText()
         text = self.filter_content(text)
@@ -786,6 +1141,17 @@ class SkeletonTree(QTreeView):
                 del last_item_at_level[key]
                 
     def on_item_clicked(self, index):
+        """
+        Handles the event when an item is clicked in the UI.
+    
+        This method searches for the text of the clicked item within a text editor widget,
+        highlighting the found text and setting the cursor position to the start of this text.
+        If the same item is clicked again, it continues the search from the last found position.
+        If no more occurrences are found, it resets the search for this item.
+    
+        Parameters:
+        - index: QModelIndex representing the index of the clicked item in the model.
+        """        
         item = self.model.itemFromIndex(index)
         word = item.text()
         text = self.editor.toPlainText()
@@ -817,20 +1183,66 @@ class SkeletonTree(QTreeView):
             self.last_clicked_item = None  # Reset if a different item is clicked
                                    
 class Bridge(QObject):
+    """
+    A bridge class for logging messages from JavaScript to a Qt text widget.
+
+    This class serves as a bridge between JavaScript running in a QWebEngineView and
+    a Qt text widget, allowing messages to be logged to the Qt widget.
+
+    Attributes:
+    - output_console: A QTextEdit or similar widget used for displaying log messages.    
+    Inheritance:
+        - QObject: QT object used as template.
+    """
     def __init__(self, output_console):
+        """
+        Initializes the Bridge object with an output console.
+
+        Parameters:
+        - output_console: QTextEdit or similar widget for displaying output.
+        """        
         super().__init__()
         self.output_console = output_console
 
     @Slot(str)
     def log(self, message):
-        # This method will now append messages to the output console
+        """
+        Appends a given message to the output console with a prefixed "> ".
+
+        Parameters:
+        - message: str, the message to log.
+        """        
         self.output_console.append("> " + message)
 
 class OutputConsole(QTextEdit):
     pass
 
 class JsSandbox(QWidget):
+    """
+    A widget that provides an interface for running JavaScript in a sandboxed environment.
+
+    This class combines a code editor for JavaScript, a button to execute the script,
+    and an output console for displaying messages logged from the JavaScript code.
+    It uses a QWebEngineView to run the JavaScript in a sandboxed environment.
+
+    Attributes:
+    - editor: CodeEditor, a text editor for writing JavaScript code.
+    - output_console: OutputConsole, a widget for displaying logged messages.
+    - view: QWebEngineView, the web view where JavaScript is executed.
+    - bridge: Bridge, a bridge object for logging messages from JavaScript to the output console.
+    - html_editor: QTextEdit, an editor for the HTML content that the JavaScript will interact with.
+    
+    Inheritance:
+        - QWidget: QT object used as template.
+    """
+    
     def __init__(self, html_editor):
+        """
+        Initializes the JsSandbox widget with an HTML editor.
+
+        Parameters:
+        - html_editor: QTextEdit, an editor for the HTML content.
+        """        
         super().__init__()
         self.layout = QVBoxLayout(self)
         self.horizSplit = QSplitter(Qt.Vertical)
@@ -865,9 +1277,18 @@ then hit run javascript to execute the sandbox code vs the code in the active Su
         self.layout.addWidget(self.run_button)        
 
     def get_view(self):
+        """
+        Returns the QWebEngineView used for executing JavaScript.
+
+        Returns:
+        - QWebEngineView: The web view where JavaScript is executed.
+        """        
         return self.view
 
     def run_javascript(self):
+        """
+        Executes the JavaScript code written in the code editor within the web view.
+        """        
         # Example method to run JavaScript code and access the HTML content from the editor
         self.view.setHtml(self.add_qbridge_html())
         js_code = self.editor.toPlainText()
@@ -875,11 +1296,30 @@ then hit run javascript to execute the sandbox code vs the code in the active Su
         self.update_js_sandbox()
     
     def update_js_sandbox(self, editor=None):
+        """
+        Updates the HTML content in the web view with the content from the provided HTML editor.
+
+        Parameters:
+        - editor: QTextEdit, an optional editor containing new HTML content. If not provided,
+                  the current html_editor's content is used.
+        """        
         if editor != None:            
             self.html_editor = editor
         self.view.setHtml(self.add_qbridge_html())
         
     def add_qbridge_html(self, init_text=None):
+        """
+        Constructs the HTML content with the necessary JavaScript for the QWebChannel bridge.
+
+        This method injects the bridge initialization script into the HTML content,
+        allowing JavaScript executed in the web view to log messages to the output console.
+
+        Parameters:
+        - init_text: str, optional initial JavaScript to run when the page loads.
+
+        Returns:
+        - str: The constructed HTML content with the bridge initialization script.
+        """        
         introduction = ''
         if init_text:
             introduction = init_text
@@ -904,16 +1344,36 @@ then hit run javascript to execute the sandbox code vs the code in the active Su
         return qbridge_html + html_injection
     
 class ConsoleWidget(QPlainTextEdit):
+    """
+    A read-only console widget for displaying log messages.
+
+    Inheritance:
+        - QPlainTextEdit: QT object used as template.
+    """
+    
     def __init__(self, parent=None):
+        """
+        Initializes the ConsoleWidget.
+
+        :param parent: The parent widget.
+        """        
         super().__init__(parent)
         self.setReadOnly(True)
     
     @Slot(str)
     def log_message(self, messages):
+        """
+        Logs a list of messages to the console.
+
+        :param messages: A list of string messages to be logged.
+        """        
         for message in messages:
             self.appendPlainText(message)
             
     def clear_console(self):
+        """
+        Clears the console and prints a new browser instance message.
+        """        
         self.appendPlainText('')
         self.appendPlainText('---------------------------------------------------')
         self.appendPlainText('----------------New Browser Instance---------------')
@@ -921,17 +1381,47 @@ class ConsoleWidget(QPlainTextEdit):
         self.appendPlainText('')
 
 class ConsoleEnabledPage(QWebEnginePage):
+    """
+    A QWebEnginePage with the capability to handle and emit JavaScript console messages.
+    
+    Inheritance:
+        - QWebEnginePage: QT object used as template.
+    """
+    
     newData = Signal(list)
     def __init__(self, *args, **kwargs):
+        """
+        Initializes the ConsoleEnabledPage.
+        """        
         super().__init__(*args, **kwargs)
 
     def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
+        """
+        Handles JavaScript console messages by emitting them as a signal.
+
+        :param level: The message level.
+        :param message: The message content.
+        :param lineNumber: The line number where the message was generated.
+        :param sourceID: The source ID of the message.
+        """        
         l = message.split(",")
         l[0] = f'{sourceID}: Line {lineNumber} > ' + l[0]
         self.newData.emit(l)  # Emit the signal with the list
         
 class AiWidget(QWidget):
+    """
+    A widget for interacting with an AI, allowing users to input queries and see responses.
+    
+    Inheritance:
+        - QWidget: QT object used as template.
+    """
+    
     def __init__(self, ai_type):
+        """
+        Initializes the AiWidget with a specific AI type.
+
+        :param ai_type: The type of AI interaction, e.g., 'bugfix' or 'refactor'.
+        """        
         super().__init__()
         self.ai_type = ai_type
         self.query_placeholders = {'bugfix': "Enter the code block here to have AI fix the bugs...",
@@ -939,6 +1429,9 @@ class AiWidget(QWidget):
         self.initUI()
 
     def initUI(self):
+        """
+        Initializes the user interface components of the AiWidget.
+        """        
         # Layout
         layout = QVBoxLayout()
         # Text entry area
@@ -957,13 +1450,28 @@ class AiWidget(QWidget):
         self.setLayout(layout)
 
 class FlaskCompatWidget(QWidget):
+    """
+    A widget designed to facilitate Flask compatibility by parsing and modifying HTML content.
+    
+    Inheritance:
+        - QWidget: QT object used as template.
+    """
+
     def __init__(self, editor):
+        """
+        Initializes the FlaskCompatWidget with a reference to an HTML editor.
+
+        :param editor: A QTextEdit instance used for editing HTML content.
+        """        
         super().__init__()
         self.html_editor = editor
         self.matches_and_line_edits = []  # Store tuples of (match, QLineEdit)
         self.initUI()
 
     def initUI(self):
+        """
+        Initializes the user interface components of the FlaskCompatWidget.
+        """        
         self.layout = QVBoxLayout()
         # Button to parse HTML
         self.parse_button = QPushButton("Parse HTML for Flask injections")
@@ -985,6 +1493,9 @@ class FlaskCompatWidget(QWidget):
         self.setLayout(self.layout)
 
     def parse_html(self):
+        """
+        Parses the HTML content from the editor and finds Jinja template code for potential replacement.
+        """        
         html_content = self.html_editor.toPlainText()
         # Regex to find Jinja template code
         matches = re.findall(r"\{\{.*?\}\}", html_content)
@@ -1008,6 +1519,11 @@ class FlaskCompatWidget(QWidget):
             self.add_match_ui(match)
 
     def add_match_ui(self, match):
+        """
+        Adds a user interface for a found match, allowing for its replacement.
+
+        :param match: The matched string from the HTML content.
+        """        
         layout = QHBoxLayout()
         label = QLabel(match)
         line_edit = QLineEdit()
@@ -1022,11 +1538,20 @@ class FlaskCompatWidget(QWidget):
         self.matches_and_line_edits.append((match, line_edit))  # Store the match and its line edit
 
     def replace_match(self, match, replacement):
+        """
+        Replaces a single match in the HTML content with a user-provided replacement.
+
+        :param match: The original matched string.
+        :param replacement: The replacement string.
+        """        
         current_html = self.html_editor.toPlainText()
         updated_html = current_html.replace(match, replacement, 1)
         self.html_editor.setPlainText(updated_html)
 
     def replace_all_matches(self):
+        """
+        Replaces all matches in the HTML content with their corresponding user-provided replacements.
+        """        
         current_html = self.html_editor.toPlainText()
         for match, line_edit in self.matches_and_line_edits:
             replacement = line_edit.text()
@@ -1034,4 +1559,9 @@ class FlaskCompatWidget(QWidget):
         self.html_editor.setPlainText(current_html)
         
     def update_editor(self, editor):
+        """
+        Updates the reference to the HTML editor.
+
+        :param editor: A new QTextEdit instance for editing HTML content.
+        """        
         self.html_editor = editor
