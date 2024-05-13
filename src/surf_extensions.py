@@ -238,14 +238,13 @@ class CodeEditor(QPlainTextEdit):
         self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
 
     def updateLineNumberArea(self, _=0):
-        ):
-            """
-            Redraws the line number area. This method is typically called when the document is scrolled
-            or the line number area width is updated.
-        
-            Args:
-                _ (int, optional): Placeholder parameter, not used. Defaults to 0.
-            """                
+        """
+        Redraws the line number area. This method is typically called when the document is scrolled
+        or the line number area width is updated.
+    
+        Args:
+            _ (int, optional): Placeholder parameter, not used. Defaults to 0.
+        """                
         self.lineNumberArea.update()
 
     def resizeEvent(self, event):
