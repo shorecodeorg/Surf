@@ -100,6 +100,9 @@ class Ui_MainWindow(QMainWindow):
             self.completer.popup().hide()  # Hide the popup if no match is found
         
     def setup_menu(self, MainWindow):
+        """
+        Creates the necessary UI elements for the top dropdown menus (File, Edit, Help, etc.)
+        """
         self.actionNew = QAction(MainWindow)
         self.actionNew.setObjectName(u"actionNew")
         self.actionOpen = QAction(MainWindow)
@@ -151,6 +154,9 @@ class Ui_MainWindow(QMainWindow):
         
         
     def setup_editor(self, MainWindow):
+        """
+        Creates the necessary UI elements for the code editor
+        """
         self.gridLayout = QSplitter(Qt.Vertical)
         self.gridLayout.setObjectName(u"gridLayout")
         self.splitWidget = QTabWidget(self.centralwidget)
@@ -208,6 +214,9 @@ class Ui_MainWindow(QMainWindow):
         #self.textEdit_2.cursorPositionChanged.connect(self.updateCompleterPosition)
 
     def setup_browser(self, MainWindow):
+        """
+        Creates the necessary UI elements for the web browser
+        """
         self.tabWidget = QTabWidget(self.centralwidget)
         self.tabWidget.setObjectName(u"tabWidget")
         self.sizePolicy.setHeightForWidth(self.tabWidget.sizePolicy().hasHeightForWidth())
@@ -312,6 +321,9 @@ class Ui_MainWindow(QMainWindow):
 
 
     def setup_surf_menu(self, MainWindow):
+        """
+        Creates the necessary UI elements for the folding left side 'Surf' menu
+        """
         self.surfBtn = QPushButton(self.centralwidget)
         self.surfBtn.setObjectName(u"surfBtn")
 
@@ -501,6 +513,7 @@ class Ui_MainWindow(QMainWindow):
         MainWindow.setStatusBar(self.statusbar)
         self.surfMenu.hide()
 
+        # Signals are below
         self.retranslateUi(MainWindow)
         self.surfBtn.clicked.connect(self.toggle_surf)
         self.actionNew.triggered.connect(self.add_tab)
@@ -531,6 +544,7 @@ class Ui_MainWindow(QMainWindow):
         self.editorWidget.tabBar().tabCloseRequested.connect(lambda idx: self.remove_tab(idx, self.editorWidget, pop_from_list=True))
         self.splitWidget.tabBar().tabCloseRequested.connect(lambda idx2: self.remove_tab(idx2, self.splitWidget))
         self.consoleEnabledPage.newData.connect(self.console.log_message)
+        # End of signals
                        
         self.splitWidget.setCurrentIndex(0)
         self.editorWidget.setCurrentIndex(0)
@@ -542,6 +556,16 @@ class Ui_MainWindow(QMainWindow):
     # setupUi
     
     def update_extensions(self, i):
+        """
+        Updates various extensions based on the currently selected editor tab.
+    
+        This method is responsible for updating the state of flask compatibility, JS sandbox, skeleton,
+        and find/replace widgets, as well as the browsers and console based on the content of the currently
+        active editor tab.
+    
+        Args:
+            i (int): The index of the currently selected tab in the editor widget.
+        """        
         self.update_flask_compat(i)
         self.update_js_sandbox(i)
         self.update_skeleton(i)
@@ -554,12 +578,24 @@ class Ui_MainWindow(QMainWindow):
     
     
     def flask_compat(self):
+        """
+        Initializes and displays the Flask Compatibility widget in a new tab.
+    
+        This slot creates a FlaskCompatWidget for the currently active editor and adds it to the splitWidget
+        with the label 'Flask Compatibility'.
+        """        
         editor_idx = self.editorWidget.currentIndex()
         editor = self.editor_tabs[editor_idx]                
         self.flask_compat_widget = FlaskCompatWidget(editor)
         self.splitWidget.addTab(self.flask_compat_widget, 'Flask Compatibility')
         
     def update_flask_compat(self, i):
+        """
+        Updates the Flask Compatibility widget with the content from the currently selected editor tab.
+    
+        Args:
+            i (int): The index of the currently selected tab in the editor widget.
+        """        
         try:            
             editor = self.editor_tabs[i]        
             self.flask_compat_widget.update_editor(editor)
@@ -567,31 +603,66 @@ class Ui_MainWindow(QMainWindow):
             pass                
     
     def ai_refactor(self):
+        """
+        Initializes and displays the AI Refactor widget in a new tab.
+    
+        This slot creates an AiWidget configured for code refactoring and adds it to the splitWidget
+        with the label 'AI Refactor'.
+        """        
         self.ai_refactor_widget = AiWidget('refactor')
         self.ai_refactor_widget.query_button.clicked.connect(self.ai_refactor_query)
         self.splitWidget.addTab(self.ai_refactor_widget, 'AI Refactor')
     
     def ai_refactor_query(self):
+        """
+        Processes the query for AI-based code refactoring and displays the response.
+    
+        Takes the input from the query text edit in the AI Refactor widget, processes it, and displays
+        the AI-generated response in the answer text edit.
+        """        
         query = self.ai_refactor_widget.query_text_edit.toPlainText()
 
         response = f"AI response to: {query}"
         self.ai_refactor_widget.answer_text_edit.setPlainText(response)         
     
     def ai_bug_fix(self):
+        """
+        Initializes and displays the AI Bug Fix widget in a new tab.
+    
+        This slot creates an AiWidget configured for bug fixing and adds it to the splitWidget
+        with the label 'AI Bug Fix'.
+        """        
         self.ai_bug = AiWidget('bugfix')
         self.ai_bug.query_button.clicked.connect(self.ai_bug_fix_query)
         self.splitWidget.addTab(self.ai_bug, 'AI Bug Fix')
     
     def ai_bug_fix_query(self):
+        """
+        Processes the query for AI-based bug fixing and displays the response.
+    
+        Takes the input from the query text edit in the AI Bug Fix widget, processes it, and displays
+        the AI-generated response in the answer text edit.
+        """        
         query = self.ai_bug.query_text_edit.toPlainText()
 
         response = f"AI response to: {query}"
         self.ai_bug.answer_text_edit.setPlainText(response)        
     
     def update_console(self):
+        """
+        Clears the content of the console widget.
+    
+        This slot is responsible for clearing any existing output or messages displayed in the console widget.
+        """        
         self.console.clear_console()
         
     def js_sandbox(self):
+        """
+        Initializes and displays the JavaScript Sandbox in a new tab.
+    
+        This slot creates a JsSandbox for the currently active editor, adds it to the splitWidget with the label
+        'JS Sandbox', and also adds its web view to the tabWidget.
+        """        
         editor_idx = self.editorWidget.currentIndex()
         editor = self.editor_tabs[editor_idx]        
         sandbox = JsSandbox(editor)
@@ -601,6 +672,12 @@ class Ui_MainWindow(QMainWindow):
         self.sandbox = sandbox
     
     def update_js_sandbox(self, i):
+        """
+        Updates the JavaScript Sandbox with the content from the currently selected editor tab.
+    
+        Args:
+            i (int): The index of the currently selected tab in the editor widget.
+        """        
         try:            
             editor = self.editor_tabs[i]        
             self.sandbox.update_js_sandbox(editor)
@@ -608,6 +685,15 @@ class Ui_MainWindow(QMainWindow):
             pass
     
     def update_skeleton(self, i):
+        """
+        Updates the skeleton tree view for the editor at the specified index.
+    
+        This slot is typically connected to a signal that indicates a change in the editor that requires
+        the skeleton tree view to be refreshed.
+    
+        Args:
+            i (int): The index of the editor in the editor tabs list.
+        """        
         try:            
             editor = self.editor_tabs[i]        
             self.skele.update_tree_view(editor)
@@ -615,6 +701,13 @@ class Ui_MainWindow(QMainWindow):
             pass
     
     def skeleton(self):
+        """
+        Initializes and displays the skeleton tree view for the current active editor.
+    
+        This method creates a new SkeletonTree instance, sets up its UI components, and adds it to a new tab
+        in the splitWidget. It connects the update button to refresh the skeleton tree view based on the current
+        editor's content.
+        """        
         editor_idx = self.editorWidget.currentIndex()
         editor = self.editor_tabs[editor_idx]
         self.skele = SkeletonTree(editor)        
@@ -631,10 +724,23 @@ class Ui_MainWindow(QMainWindow):
         self.splitWidget.addTab(container_widget, 'Skeleton')
 
     def closeTab(self, index, tab_widget):
+        """
+        Closes the tab at the specified index and removes it from the tab widget and editor tabs list.
+    
+        Args:
+            index (int): The index of the tab to be closed.
+            tab_widget (QTabWidget): The tab widget from which the tab will be removed.
+        """        
         tab_widget.removeTab(index)
         self.editor_tabs.pop(index)
 
     def css_editor(self):
+        """
+        Opens a CSS editor for the currently active editor tab.
+    
+        This method attempts to create and configure a CssEditor instance for the current editor. It will
+        display a message if no editor is open.
+        """        
         try:            
             current_tab_idx = self.editorWidget.currentIndex()
             editor = self.editor_tabs[current_tab_idx]        
@@ -645,6 +751,12 @@ class Ui_MainWindow(QMainWindow):
             print('Cannot open CSS EDITOR, Open editor first')
 
     def find_replace(self):
+        """
+        Opens the find and replace widget for the currently active editor tab.
+    
+        This method initializes the FindReplaceWidget with the current editor and adds it to a new tab in the
+        splitWidget. It also sets the tab order for the find and replace inputs and buttons.
+        """        
         try:            
             current_tab_idx = self.editorWidget.currentIndex()
             editor = self.editor_tabs[current_tab_idx]
@@ -662,6 +774,14 @@ class Ui_MainWindow(QMainWindow):
             print('Cannot open find/replace, Open editor first')
             
     def update_find_replace(self, i):
+        """
+        Updates the editor instance in the find and replace widget for the editor at the specified index.
+    
+        This slot can be used to refresh the find and replace functionality when the active editor changes.
+    
+        Args:
+            i (int): The index of the editor in the editor tabs list.
+        """        
         try:            
             editor = self.editor_tabs[i]        
             self.find_replace.updateEditor(editor)
@@ -669,15 +789,30 @@ class Ui_MainWindow(QMainWindow):
             pass        
         
     def update_browsers(self, filename):
+        """
+        Loads the specified file in all browser preview widgets.
+    
+        Args:
+            filename (str): The path to the file to be loaded in the browser previews.
+        """        
         local_url = QUrl.fromLocalFile(filename)
         self.browser1080.load(local_url)
         self.browser720.load(local_url)
         self.browserMobile.load(local_url)
 
     def add_tab(self):
+        """
+        Adds a new tab with a default name 'untitled' to the editor widget.
+        """        
         self.new_tab('untitled')
 
     def new_tab(self, tab_name):
+        """
+        Creates a new editor tab with the specified name.
+    
+        Args:
+            tab_name (str): The name for the new tab.
+        """        
         new_widget = QWidget(self.editorWidget)
         new_edit = CodeEditor(new_widget)       
         self.sizePolicy.setHeightForWidth(new_widget.sizePolicy().hasHeightForWidth())
@@ -696,6 +831,14 @@ class Ui_MainWindow(QMainWindow):
         self.textEdit.cursorPositionChanged.connect(lambda: self.updateCompleterPosition(self.textEdit))        
     
     def remove_tab(self, idx, editor, pop_from_list=False):
+        """
+        Removes the tab at the specified index from the editor widget and optionally from the editor tabs list.
+    
+        Args:
+            idx (int): The index of the tab to be removed.
+            editor (QTabWidget): The editor widget from which the tab will be removed.
+            pop_from_list (bool): Whether to remove the editor from the editor tabs list. Defaults to False.
+        """        
         active_tab_name = self.editorWidget.tabText(idx)
         editor.removeTab(idx)
         if pop_from_list:
@@ -703,7 +846,17 @@ class Ui_MainWindow(QMainWindow):
         if active_tab_name in self.open_files.keys():
             del self.open_files[active_tab_name]
     
-    def save_tab(self, idx, dialog=False):        
+    def save_tab(self, idx, dialog=False):
+        """
+        Saves the content of the tab at the specified index to a file.
+    
+        If the tab corresponds to an already opened file and dialog is False, it saves the content to that file.
+        Otherwise, it prompts the user to select a file location.
+    
+        Args:
+            idx (int): The index of the tab whose content is to be saved.
+            dialog (bool): Whether to always show the save file dialog. Defaults to False.
+        """        
         active_tab_name = self.editorWidget.tabText(idx)
         if active_tab_name in self.open_files.keys() and dialog == False:
             filename = self.open_files[active_tab_name]
@@ -724,10 +877,22 @@ class Ui_MainWindow(QMainWindow):
             self.open_files[new_tab_name] = filename
         
     def save_all(self):
+        """
+        Saves the content of all open tabs to their respective files.
+    
+        This method iterates through all tabs, saving each one's content to the associated file if it exists,
+        or prompts the user to select a file location if not.
+        """        
         for i in range(len(self.editor_tabs)):
             self.save_tab(i)
     
     def open_file(self):
+        """
+        Opens a file selected by the user and creates a new tab with its content.
+    
+        This method displays a file dialog for the user to select a file to open. If the file is not already
+        open in a tab, it creates a new tab with the file's content.
+        """        
         filename, _ = QFileDialog.getOpenFileName(None, "Open", "",
                     "All Files (*);;HTML Files (*.html);;CSS Files (*.css);;Javascript Files (*.js)")
         tab_name = filename.split('/')[-1]
@@ -745,6 +910,11 @@ class Ui_MainWindow(QMainWindow):
             self.editorWidget.tabBar().tabSizeHint(-1, len(tab_name))
     
     def toggle_surf(self):
+        """
+        Toggles the visibility of the surf menu.
+    
+        If the surf menu is currently visible, it hides it; if it is hidden, it shows it.
+        """        
         if self.surfMenu.isHidden():
             self.surfMenu.show()
         else:
