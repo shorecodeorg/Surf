@@ -30,3 +30,6 @@ proj.directory-list = [{'dirloc': loc('.'),
                         'watch_for_changes': True}]
 proj.file-type = 'shared'
 proj.ptype = 'pyqt'
+testing.auto-test-file-specs = (('regex',
+                                 '\\btest_.+\\b'),)
+testing.test-framework = {None: ':internal pytest'}
