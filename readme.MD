@@ -1,50 +1,62 @@
+# Getting Started
 
-## Getting Started
+Follow these steps to set up the project on your machine:
 
-1 - Clone the repo to the machine you want to run this on
-2 - From the shell in the root project directory, type pip install -r requirements.txt
-3 - From the shell type 'python3 surf_main.py' for Linux 'python surf_main.py' for Windows
-4 - Use the editor!
+1. **Clone the repo** to the machine you want to run this on.
+2. From the shell in the **root project directory**, type `pip install -r requirements.txt`.
+3. From the shell, in the **'project_root/src' directory** type:
+   - `python3 surf_main.py` for **Linux**
+   - `python surf_main.py` for **Windows**
+4. **Use the editor!**
 
-### Prerequisites
+## Prerequisites
 
-1 - Prerequisite libraries are listed in the requirements.txt file
+- Prerequisite libraries are listed in the `requirements.txt` file.
+- Works with Python version 3.10 and likely most other Python iterations of version 3
 
-### Installing
+## Installing
 
-1 - Clone the repo to the machine you want to run this on
-2 - From the shell in the root project directory, type pip install -r requirements.txt
+To install the necessary components:
+
+1. **Clone the repo** to the machine you want to run this on.
+2. From the shell in the **root project directory**, type `pip install -r requirements.txt`.
 
 ## Usage
 
-To be added later
+To be added later.
 
-## Running the tests
+## Running the Tests
 
-pytest test* within the tests directory
+Execute the tests within the tests directory using:
+
+```
+pytest test*
+```
 
 ## Built With
 
-1 - Pyside 6
-2 - Python 3.10
-3 - Qt Designer
+1. **Pyside 6**
+2. **Python 3.10**
+3. **Qt Designer**
 
 ## Contributing
 
-1 - Please contribute!
+Please contribute!
 
 ## Authors
 
-1 - Kevin Fink - CEO - Shorecode LLC
+- **Kevin Fink** - CEO - Shorecode LLC
+- *https://shorecode.org*
 
 ## License
 
-MIT license
+This project is licensed under the **MIT license**.
 
 ## Acknowledgments
 
 This project was made possible by the knowledge from this book:
 
-Mastering GUI Programming with Python: Develop Impressive Cross-platform GUI Applications with PyQt
-Alan D. Moore, 2019
+- *Mastering GUI Programming with Python: Develop Impressive Cross-platform GUI Applications with PyQt* by Alan D. Moore, 2019.
 
+Also made possible by this wonderful IDE:
+- *https://wingware.com/*
